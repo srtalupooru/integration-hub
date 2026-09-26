@@ -1,0 +1,451 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "component"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "enum": [
+        "1.0",
+        "1.1"
+      ]
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "type",
+        "environment"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+        },
+        "type": {
+          "enum": [
+            "ExternalSystem",
+            "InternalSystem",
+            "Api",
+            "ApiManagement",
+            "ServiceBusTopic",
+            "ServiceBusQueue",
+            "AzureFunction",
+            "LogicApp",
+            "Database",
+            "Storage",
+            "EventGrid",
+            "Library",
+            "NuGetPackage",
+            "Sftp",
+            "FileShare",
+            "SaaS",
+            "MessageBroker",
+            "Transformation",
+            "ManualProcess",
+            "Custom"
+          ]
+        },
+        "environment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "domain": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 10000
+        },
+        "owner": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "technology": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "status": {
+          "enum": [
+            "Draft",
+            "Development",
+            "Test",
+            "Production",
+            "Deprecated",
+            "Retired"
+          ]
+        },
+        "criticality": {
+          "enum": [
+            "Low",
+            "Medium",
+            "High",
+            "Critical"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+          }
+        },
+        "consumes": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/binding"
+          }
+        },
+        "publishes": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/binding"
+          }
+        },
+        "endpoints": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/endpoint"
+          }
+        },
+        "calls": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/call"
+          }
+        },
+        "sends": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/command"
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://integrationhub.local/schemas/component-definition.schema.json",
+  "title": "Independent component definition",
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "contract",
+        "version",
+        "messageType",
+        "channel"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "contract": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+        },
+        "messageType": {
+          "enum": [
+            "Event",
+            "Command",
+            "Document",
+            "Request",
+            "Response"
+          ]
+        },
+        "channel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "namespace",
+            "name"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "Topic",
+                "Queue",
+                "Http",
+                "Stream"
+              ]
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^\\S+$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^\\S+$"
+            }
+          }
+        },
+        "contentType": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$"
+        },
+        "schemaFingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "sourceComponent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "targetComponent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "subscription": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^\\S+$"
+        }
+      }
+    },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "HEAD",
+            "OPTIONS",
+            "TRACE",
+            "CONNECT"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^/[^\\s?#]*$"
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "path"
+      ]
+    },
+    "call": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "targetComponent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "endpoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "HEAD",
+            "OPTIONS",
+            "TRACE",
+            "CONNECT"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "id",
+        "targetComponent",
+        "endpoint",
+        "method"
+      ]
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "contract",
+        "version",
+        "messageType",
+        "channel"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "contract": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+        },
+        "messageType": {
+          "const": "Command"
+        },
+        "channel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "namespace",
+            "name"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "Topic",
+                "Queue",
+                "Stream"
+              ]
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^\\S+$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^\\S+$"
+            }
+          }
+        },
+        "contentType": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$"
+        },
+        "schemaFingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "sourceComponent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "targetComponent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "subscription": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^\\S+$"
+        }
+      }
+    }
+  }
+}

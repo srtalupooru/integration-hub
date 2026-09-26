@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+<ItemGroup><ProjectReference Include="../IntegrationHub.Application/IntegrationHub.Application.csproj" /><ProjectReference Include="../IntegrationHub.Infrastructure/IntegrationHub.Infrastructure.csproj" /><ProjectReference Include="../IntegrationHub.Web/IntegrationHub.Web.csproj" /></ItemGroup>
+<ItemGroup><PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.24" /><PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.24" /><PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="8.0.24" /><PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" /></ItemGroup>
+</Project>

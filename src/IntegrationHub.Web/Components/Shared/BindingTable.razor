@@ -1,0 +1,8 @@
+@if (Bindings.Count == 0) { <p class="muted">No messages declared in this direction.</p> }
+else
+{
+    <div class="table-scroll"><table><thead><tr><th>Binding / contract</th><th>Version / type</th><th>Channel</th><th>Routing</th><th>Payload</th></tr></thead><tbody>
+    @foreach (var b in Bindings) { <tr><td><strong>@b.Contract</strong><small>@b.Id</small><p>@b.Description</p></td><td>@b.Version<small>@b.MessageType</small></td><td>@b.Channel.Kind<small>@b.Channel.Namespace / @b.Channel.Name</small></td><td>@if (b.Subscription is not null) { <p>Subscription/group: @b.Subscription</p> } @if (b.SourceComponent is not null) { <p>From: @b.SourceComponent</p> } @if (b.TargetComponent is not null) { <p>To: @b.TargetComponent</p> }</td><td>@b.ContentType<small>@(b.SchemaFingerprint is null ? "Schema fingerprint not supplied" : "SHA-256: " + b.SchemaFingerprint)</small></td></tr> }
+    </tbody></table></div>
+}
+@code { [Parameter] public IReadOnlyList<MessageBinding> Bindings { get; set; } = []; }

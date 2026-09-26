@@ -1,0 +1,56 @@
+@page "/integrations/{Id}"
+@inherits ApiPage
+@inject NavigationManager Navigation
+<PageTitle>@(_detail?.Definition.Name ?? "Integration") · Integration Hub</PageTitle>
+<a class="breadcrumb" href="/integrations">← Integration catalogue</a>
+<PageState Loading="Loading" Error="@Error" />
+@if (_detail is not null)
+{
+    var definition = _detail.Definition;
+    <div class="page-heading"><div><div class="eyebrow">@definition.BusinessDomain · @definition.Id.Value</div><h1>@definition.Name</h1><p>@definition.Description</p><div class="tag-list"><span class="badge @definition.Status.ToString().ToLowerInvariant()">@definition.Status</span><span class="tag">v@definition.Version</span><span class="tag">@definition.Criticality criticality</span>@foreach (var tag in definition.Tags) { <span class="tag">@tag</span> }</div></div><div class="button-row">@if (Api.CanEdit) { <MudButton Href="@($"/integrations/{Id}/edit")" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Edit">Edit definition</MudButton> }<MudMenu Label="Export" Variant="Variant.Outlined"><MudMenuItem Href="@($"/api/integrations/{Id}/documentation?format=markdown")" Target="_blank">Markdown</MudMenuItem><MudMenuItem Href="@($"/api/integrations/{Id}/documentation?format=html")" Target="_blank">HTML</MudMenuItem></MudMenu></div></div>
+    <div class="detail-summary"><div><small>OWNER</small><strong>@definition.Ownership.Team</strong></div><div><small>SUPPORT TEAM</small><strong>@definition.Ownership.SupportTeam</strong></div><div><small>ENVIRONMENT</small><strong>@(string.IsNullOrEmpty(definition.Environment) ? "Not documented" : definition.Environment)</strong></div><div><small>LAST UPDATED</small><strong>@_detail.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</strong></div></div>
+    <div class="panel detail-tabs"><MudTabs Rounded="true" Border="false" KeepPanelsAlive="false">
+        <MudTabPanel Text="Overview"><DocumentationView Document="_documentation" /></MudTabPanel>
+        <MudTabPanel Text="Architecture"><div class="panel-heading"><div><h2>Integration architecture</h2><p>Generated from revision @_detail.Revision · @definition.Nodes.Count components · @definition.Edges.Count connections</p></div><span class="badge">Derived from definition</span></div><Diagram Markup="@_diagram" /><p class="muted">Dashed connections are asynchronous. Dashed component borders indicate optional components.</p></MudTabPanel>
+        <MudTabPanel Text="Flow"><h2>End-to-end relationships</h2><div class="table-scroll"><table><thead><tr><th>From</th><th>Relationship</th><th>To</th><th>Mode</th><th>Protocol</th></tr></thead><tbody>@foreach (var edge in definition.Edges) { <tr><td>@Name(edge.FromNodeId)</td><td>@edge.Label</td><td>@Name(edge.ToNodeId)</td><td>@edge.Mode</td><td>@edge.Protocol</td></tr> }</tbody></table></div></MudTabPanel>
+        <MudTabPanel Text="Systems"><div class="catalogue-grid">@foreach (var node in definition.Nodes) { <article class="panel"><span class="badge">@node.Type</span><h3>@node.Name</h3><p>@node.Description</p><small>@node.Technology · @node.Owner</small>@if (node.SystemId is not null) { <p><a href="@($"/systems/{node.SystemId}")">Registered system →</a></p> }<p><a href="@($"/dependencies?component={Uri.EscapeDataString(NodeKey(node))}")">Analyze component impact →</a></p></article> }</div></MudTabPanel>
+        <MudTabPanel Text="Interfaces"><div class="table-scroll"><table><thead><tr><th>Interface</th><th>Transport</th><th>Authentication</th><th>Retry behaviour</th></tr></thead><tbody>@foreach (var edge in definition.Edges) { <tr><td>@edge.Label<small>@edge.Description</small></td><td>@edge.TransportType @edge.Protocol</td><td>@edge.AuthenticationType</td><td>@edge.RetryBehaviour</td></tr> }</tbody></table></div></MudTabPanel>
+        <MudTabPanel Text="Messages">@foreach (var message in definition.AllMessages) { <article class="message-row"><span class="badge">@message.Type</span><h3><a href="@($"/messages/{Uri.EscapeDataString(message.Name)}")">@message.Name</a></h3><p>@Name(message.Producer) → @message.Name → @string.Join(", ", message.Consumers.Select(Name))</p><p>@message.Description</p></article> }@if (!definition.AllMessages.Any()) { <p>No messages have been defined.</p> }</MudTabPanel>
+        <MudTabPanel Text="Dependencies"><h2>Declared dependencies</h2>@foreach (var dependency in definition.Dependencies) { <p><a href="@($"/integrations/{dependency.IntegrationId}")">@dependency.IntegrationId</a> — @dependency.Description</p> }@if (definition.Dependencies.Count == 0) { <p>No explicit integration dependencies.</p> }<MudButton Href="@($"/dependencies?component=integration:{Id}")" Color="Color.Primary">Analyze dependency impact →</MudButton></MudTabPanel>
+        @foreach (var tab in new[] { "Operations", "Monitoring", "Reliability", "Security" })
+        { <MudTabPanel Text="@tab"><DocumentationView Document="@SectionDocument(tab)" />@if (tab == "Monitoring") { <MudAlert Severity="Severity.Info">Monitoring configuration is documentation metadata. Runtime health is unknown; live telemetry is not connected.</MudAlert> }</MudTabPanel> }
+        <MudTabPanel Text="Repositories">@foreach (var link in definition.Repositories) { <div class="link-row"><a href="@link.Url" target="_blank" rel="noopener noreferrer">@link.Name ↗</a></div> }@if (definition.Repositories.Count == 0) { <p>No repositories documented.</p> }</MudTabPanel>
+        <MudTabPanel Text="Runbooks">@foreach (var link in definition.Runbooks) { <div class="link-row"><a href="@link.Url" target="_blank" rel="noopener noreferrer">@link.Name ↗</a></div> }@if (definition.Runbooks.Count == 0) { <p>No runbooks documented.</p> }</MudTabPanel>
+        <MudTabPanel Text="Raw Definition"><div class="button-row"><MudButton OnClick="Original">Original (@_detail.Format)</MudButton><MudButton OnClick="@(() => ConvertDefinition("json"))">JSON</MudButton><MudButton OnClick="@(() => ConvertDefinition("yaml"))">YAML</MudButton></div><pre class="raw-definition">@_raw</pre><small class="muted">SHA-256: @_detail.DefinitionHash</small></MudTabPanel>
+        <MudTabPanel Text="Validation"><ValidationView Result="_detail.Validation" /></MudTabPanel>
+        <MudTabPanel Text="Version History"><h2>Definition history</h2>@foreach (var version in _versions) { <details class="version-row"><summary><strong>Revision @version.Revision</strong><span>v@version.Version · @version.Timestamp.ToLocalTime().ToString("dd MMM yyyy HH:mm") · @version.ChangedBy</span></summary><p>@version.ChangeSummary</p><small>SHA-256: @version.DefinitionHash</small><pre class="raw-definition">@version.OriginalDefinition</pre></details> }</MudTabPanel>
+    </MudTabs></div>
+    @if (Api.IsAdmin) { <details class="danger-zone"><summary>Administration</summary><p>Archiving removes this integration from the catalogue and preserves its history. Referencing integrations must be updated first.</p><MudCheckBox T="bool" @bind-Value="_confirmDelete" Label="I want to archive this integration" /><MudButton OnClick="Delete" Disabled="@(!_confirmDelete || Loading)" Color="Color.Error" Variant="Variant.Outlined">Archive integration</MudButton></details> }
+}
+@code {
+    [Parameter] public string Id { get; set; } = "";
+    private IntegrationDetail? _detail;
+    private IntegrationDocumentation? _documentation;
+    private IReadOnlyList<DefinitionVersion> _versions = [];
+    private string _diagram = "", _raw = "";
+    private bool _confirmDelete;
+    protected override async Task LoadAsync()
+    {
+        var prefix = $"/api/integrations/{Uri.EscapeDataString(Id)}";
+        _detail = await Api.GetAsync<IntegrationDetail>(prefix);
+        _raw = _detail.OriginalDefinition;
+        _diagram = await Api.GetAsync<string>(prefix + "/diagram");
+        _documentation = await Api.GetAsync<IntegrationDocumentation>(prefix + "/documentation");
+        _versions = await Api.GetAsync<IReadOnlyList<DefinitionVersion>>(prefix + "/versions");
+    }
+    private string Name(string id) => _detail!.Definition.Nodes.FirstOrDefault(n => n.Id == id)?.Name ?? id;
+    private string NodeKey(IntegrationNode n) => n.SystemId is not null ? $"system:{n.SystemId}" : n.SharedResourceId is not null ? $"resource:{n.SharedResourceId}" : $"node:{Id}:{n.Id}";
+    private IntegrationDocumentation? SectionDocument(string tab)
+    {
+        var titles = tab switch { "Operations" => new[] { "Operational support", "Contacts", "Error handling", "Dead-letter handling" }, "Monitoring" => ["Monitoring", "Logging", "Alerting"], "Reliability" => ["Reliability", "Error handling", "Dead-letter handling"], _ => ["Security"] };
+        return _documentation is null ? null : _documentation with { Name = tab, Description = "", Sections = _documentation.Sections.Where(s => titles.Contains(s.Title)).ToArray() };
+    }
+    private void Original() => _raw = _detail!.OriginalDefinition;
+    private Task ConvertDefinition(string format) => ExecuteAsync(async () => _raw = await Api.GetAsync<string>($"/api/integrations/{Id}/definition?format={format}"));
+    private Task Delete() => ExecuteAsync(async () => { await Api.SendAsync<string>("DELETE", $"/api/integrations/{Id}?expectedRevision={_detail!.Revision}", null); Navigation.NavigateTo("/integrations"); });
+}

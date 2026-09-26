@@ -1,0 +1,3 @@
+@if (Loading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-6" /> }
+@if (Error is not null) { <MudAlert Severity="Severity.Error" Class="mb-6">@Error</MudAlert> }
+@code { [Parameter] public bool Loading { get; set; } [Parameter] public string? Error { get; set; } }

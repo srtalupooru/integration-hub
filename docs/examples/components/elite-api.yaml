@@ -1,0 +1,18 @@
+# Import separately through Components > Add component.
+schemaVersion: "1.1"
+component:
+  id: elite-api-dev
+  name: Elite vendor API
+  type: Api
+  environment: development
+  version: "1.0"
+  status: Development
+  domain: Finance
+  owner: Finance systems team
+  description: Receives vendor upsert requests from integration services.
+  # The function references this endpoint ID, method and version.
+  endpoints:
+    - id: upsert-vendor
+      method: PUT
+      path: /vendors
+      version: "1.0"

@@ -1,0 +1,24 @@
+@page "/discovered/{Id}"
+@inherits ApiPage
+<PageTitle>Discovered integration · Integration Hub</PageTitle>
+<PageState Loading="Loading" Error="@Error" />
+@if (_view is not null)
+{
+    var i = _view.Integration;
+    <div class="page-heading"><div><div class="eyebrow">DISCOVERED · @i.Environment</div><h1>@i.Name</h1><p>@i.Definition.Description</p></div><MudButton OnClick="Refresh">Refresh</MudButton></div>
+    <MudAlert Severity="Severity.Info">To change this integration, edit its source components. HTTP calls reference a target component and endpoint with matching method, version and environment. Messaging matches contracts and channels. Network IDs change when membership splits or merges.</MudAlert>
+    <section class="panel mt-6"><MudTabs>
+        <MudTabPanel Text="Architecture"><Diagram Markup="@_view.Diagram" /></MudTabPanel>
+        <MudTabPanel Text="Matching evidence"><div class="table-scroll"><table><thead><tr><th>From / declaration</th><th>To / declaration</th><th>Interaction</th><th>Channel / delivery</th></tr></thead><tbody>@foreach (var c in i.Connections) { <tr><td><a href="@($"/components/{c.ProducerId}")">@c.ProducerId</a><small>@c.PublishBindingId</small></td><td><a href="@($"/components/{c.ConsumerId}")">@c.ConsumerId</a><small>@c.ConsumeBindingId</small></td><td>@InteractionLabels.Describe(c)</td><td>@c.Channel.Kind · @c.Channel.Namespace / @c.Channel.Name<small>@c.Delivery · @c.Subscription</small></td></tr> }</tbody></table></div></MudTabPanel>
+        <MudTabPanel Text="Documentation"><DocumentationView Document="_view.Documentation" /></MudTabPanel>
+        <MudTabPanel Text="Findings"><DiscoveryFindings Issues="i.Issues" /></MudTabPanel>
+    </MudTabs></section>
+    <section class="panel mt-6"><h2>Source component revisions</h2><p class="muted">This view is derived from the following saved revisions. Refresh after editing a component.</p><div class="table-scroll"><table><thead><tr><th>Component</th><th>Revision</th><th>Definition SHA-256</th></tr></thead><tbody>@foreach (var source in i.Sources) { <tr><td><a href="@($"/components/{source.Id}")">@source.Name</a></td><td>@source.Revision</td><td><code>@source.DefinitionHash</code></td></tr> }</tbody></table></div><div class="button-row"><a href="@($"/api/discovery/{Id}/definition?format=yaml")" target="_blank">Snapshot YAML ↗</a><a href="@($"/api/discovery/{Id}/definition?format=json")" target="_blank">Snapshot JSON ↗</a><a href="@($"/api/discovery/{Id}/documentation?format=markdown")" target="_blank">Markdown documentation ↗</a><a href="/dependencies">Explore dependency impact →</a></div></section>
+}
+<p><a href="/discovered">← All discovered integrations</a></p>
+@code {
+    [Parameter] public string Id { get; set; } = "";
+    private DiscoveredIntegrationView? _view;
+    protected override async Task LoadAsync() { _view = null; _view = await Api.GetAsync<DiscoveredIntegrationView>($"/api/discovery/{Uri.EscapeDataString(Id)}"); }
+    private Task Refresh() => ExecuteAsync(LoadAsync);
+}

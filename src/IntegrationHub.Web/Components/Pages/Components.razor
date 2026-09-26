@@ -1,0 +1,20 @@
+@page "/components"
+@inherits ApiPage
+<PageTitle>Components · Integration Hub</PageTitle>
+<div class="page-heading"><div><div class="eyebrow">AUTHOR ONE COMPONENT AT A TIME</div><h1>Components</h1><p>Describe API endpoints and calls, commands sent, events published, and messages consumed. Matching declarations connect components automatically.</p></div><MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary">Add component</MudButton></div>
+<div class="panel search-row"><MudTextField @bind-Value="_query" Label="Search components, environment or owner" Immediate="true" Variant="Variant.Outlined" /><MudCheckBox T="bool" @bind-Value="_archived" Label="Show archived" /><MudButton OnClick="Refresh">Refresh</MudButton><MudButton Href="/discovered" Color="Color.Primary">Discovered integrations →</MudButton></div>
+<PageState Loading="Loading" Error="@Error" />
+@if (_items is not null)
+{
+    var filtered = _items.Where(c => (_archived || !c.IsArchived) && $"{c.Id} {c.Name} {c.Environment} {c.Owner} {c.Type}".Contains(_query, StringComparison.OrdinalIgnoreCase)).ToArray();
+    <p class="muted">@filtered.Length components</p>
+    @if (filtered.Length == 0) { <div class="panel empty-state"><h2>No components found</h2><p>Add a vendor API definition first, then a function that consumes its published message.</p><MudButton Href="/components/new" Color="Color.Primary">Add a component →</MudButton></div> }
+    else { <div class="panel table-scroll"><table><thead><tr><th>Component</th><th>Type</th><th>Environment</th><th>HTTP endpoints / calls</th><th>Messages</th><th>Status</th><th>Revision</th></tr></thead><tbody>@foreach (var c in filtered) { <tr><td><a href="@($"/components/{c.Id}")">@c.Name</a><small>@c.Id · @c.Owner</small></td><td>@c.Type</td><td>@c.Environment</td><td>@c.Endpoints / @c.Calls</td><td>@c.Consumes consumed · @c.Sends commands sent · @c.Publishes published</td><td><span class="badge">@(c.IsArchived ? "Archived" : c.Status)</span></td><td>@c.Revision</td></tr> }</tbody></table></div> }
+}
+@code {
+    private ComponentSummary[]? _items;
+    private string _query = "";
+    private bool _archived;
+    protected override async Task LoadAsync() => _items = await Api.GetAsync<ComponentSummary[]>("/api/components?includeArchived=true");
+    private Task Refresh() => ExecuteAsync(LoadAsync);
+}

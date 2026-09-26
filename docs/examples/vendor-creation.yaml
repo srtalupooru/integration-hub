@@ -1,0 +1,107 @@
+integration:
+  id: sample-vendor-creation
+  name: Sample Vendor Creation
+  description: Receives vendor details from GEP and creates a vendor in Elite 3E.
+  version: '1.0'
+  status: Draft
+  domain: Finance
+  criticality: High
+  environment: Development
+  tags: [sample, finance, vendors]
+
+  ownership:
+    team: Integration Engineering
+    supportTeam: Integration Support
+
+  nodes:
+    - id: gep
+      name: GEP
+      type: ExternalSystem
+
+    - id: integration-api
+      name: Vendor Integration API
+      type: Api
+      technology: ASP.NET Core
+
+    - id: vendor-topic
+      name: Vendor Events Topic
+      type: ServiceBusTopic
+      technology: Azure Service Bus
+
+    - id: vendor-function
+      name: Vendor Processing Function
+      type: AzureFunction
+      technology: .NET 8
+
+    - id: elite
+      name: Elite 3E
+      type: ExternalSystem
+
+  edges:
+    - id: receive-vendor
+      from: gep
+      to: integration-api
+      label: Receive vendor details
+      protocol: HTTPS
+      mode: Synchronous
+      messageName: VendorCreated
+
+    - id: publish-event
+      from: integration-api
+      to: vendor-topic
+      label: Publish VendorCreated
+      protocol: AMQP
+      mode: Asynchronous
+      messageName: VendorCreated
+
+    - id: consume-event
+      from: vendor-topic
+      to: vendor-function
+      label: Process VendorCreated
+      protocol: AMQP
+      mode: Asynchronous
+      messageName: VendorCreated
+
+    - id: create-vendor
+      from: vendor-function
+      to: elite
+      label: Create vendor record
+      protocol: HTTPS
+      mode: Synchronous
+      messageName: CreateVendor
+
+  messages:
+    - name: VendorCreated
+      type: Event
+      description: A vendor has been created in the source system.
+      producer: gep
+      consumers: [integration-api, vendor-function]
+      version: '1.0'
+      topicOrQueue: vendor-events
+      contentType: application/json
+
+    - name: CreateVendor
+      type: Command
+      description: Requests creation of the vendor in Elite 3E.
+      producer: vendor-function
+      consumers: [elite]
+      version: '1.0'
+      contentType: application/json
+
+  reliability:
+    retries: Three attempts with exponential backoff
+    deadLetterQueue: true
+    idempotency: true
+    errorHandling: Log failures with the vendor ID and correlation ID.
+    deadLetterHandling: Support reviews failed messages before replaying them.
+
+  monitoring:
+    applicationInsights: true
+    alertsEnabled: true
+    logging: Record correlation IDs across the entire flow.
+    alerting: Notify support when messages enter the dead-letter queue.
+
+  security:
+    authentication: OAuth 2.0 for APIs; managed identity for Azure Service Bus
+    dataClassification: Internal
+    encryption: TLS in transit

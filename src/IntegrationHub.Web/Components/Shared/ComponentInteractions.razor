@@ -1,0 +1,29 @@
+@if (Definition.Endpoints.Count > 0)
+{
+    <h2>Exposed HTTP endpoints</h2>
+    <div class="table-scroll"><table><thead><tr><th>Endpoint</th><th>Method / path</th><th>Version</th><th>Description</th></tr></thead><tbody>
+    @foreach (var e in Definition.Endpoints) { <tr><td>@e.Id</td><td><strong>@e.Method</strong> @e.Path</td><td>@e.Version</td><td>@e.Description</td></tr> }
+    </tbody></table></div>
+}
+@if (Definition.Calls.Count > 0)
+{
+    <h2>Outbound HTTP calls</h2>
+    <div class="table-scroll"><table><thead><tr><th>Call</th><th>Target API / endpoint</th><th>Method / version</th><th>Description</th></tr></thead><tbody>
+    @foreach (var c in Definition.Calls) { <tr><td>@c.Id</td><td><a href="@($"/components/{c.TargetComponent}")">@c.TargetComponent</a><small>@c.Endpoint</small></td><td>@c.Method · v@c.Version</td><td>@c.Description</td></tr> }
+    </tbody></table></div>
+}
+@if (Commands.Length > 0) { <h2>Commands sent</h2><BindingTable Bindings="Commands" /> }
+@if (Publications.Length > 0) { <h2>Events / messages published</h2><BindingTable Bindings="Publications" /> }
+@if (Consumptions.Length > 0) { <h2>Commands / events consumed</h2><BindingTable Bindings="Consumptions" /> }
+@if (Definition.Consumes.Concat(Definition.Publishes).Any(b => b.Channel.Kind == ChannelKind.Http))
+{
+    <h2>Legacy HTTP declarations</h2><p class="muted">These are HTTP requests, not broker messages. Existing links remain supported. Edit the definition to use endpoints and calls with an explicit method.</p>
+    @foreach (var b in Definition.Consumes.Where(b => b.Channel.Kind == ChannelKind.Http)) { <p>Accepts HTTP request: @b.Id · @b.Channel.Namespace@b.Channel.Name · @b.Contract v@b.Version</p> }
+    @foreach (var b in Definition.Publishes.Where(b => b.Channel.Kind == ChannelKind.Http)) { <p>Calls HTTP service: @b.Id · @b.Channel.Namespace@b.Channel.Name · @b.Contract v@b.Version</p> }
+}
+@code {
+    [Parameter, EditorRequired] public ComponentDefinition Definition { get; set; } = new();
+    private MessageBinding[] Commands => Definition.Sends.Concat(Definition.Publishes.Where(b => b.MessageType == MessageType.Command && b.Channel.Kind != ChannelKind.Http)).ToArray();
+    private MessageBinding[] Publications => Definition.Publishes.Where(b => b.MessageType != MessageType.Command && b.Channel.Kind != ChannelKind.Http).ToArray();
+    private MessageBinding[] Consumptions => Definition.Consumes.Where(b => b.Channel.Kind != ChannelKind.Http).ToArray();
+}

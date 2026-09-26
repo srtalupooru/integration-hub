@@ -1,0 +1,43 @@
+@page "/import"
+@page "/integrations/{Id}/edit"
+@inherits ApiPage
+@inject NavigationManager Navigation
+<PageTitle>Definition editor · Integration Hub</PageTitle>
+<div class="page-heading"><div><div class="eyebrow">DEFINE ONCE. DERIVE EVERYTHING.</div><h1>@(Id is null ? "Import integration definition" : "Edit integration definition")</h1><p>Paste or upload JSON or YAML. Validate and preview before publishing to the catalogue.</p></div><a class="subtle-link" href="/api/schema" target="_blank">Definition schema ↗</a></div>
+<PageState Loading="Loading" Error="@Error" />
+@if (!Loading && !Api.CanEdit) { <MudAlert Severity="Severity.Info">An Editor or Admin role is required to import definitions.</MudAlert> }
+else
+{
+    <div class="editor-grid"><section class="panel editor-panel"><div class="panel-heading"><h2>Source definition</h2><span class="badge">JSON / YAML · Auto-detect</span></div><label class="upload-label">Choose a file <InputFile OnChange="Upload" accept=".json,.yaml,.yml" /></label><label for="definition-source" class="sr-only">Integration definition</label><textarea id="definition-source" class="source-editor" value="@_source" @oninput="SourceChanged" placeholder="Paste your integration definition here…" spellcheck="false"></textarea><MudTextField @bind-Value="_summary" Label="Change summary" Variant="Variant.Outlined" Margin="Margin.Dense" /><div class="editor-actions"><MudButton OnClick="Validate" Disabled="@(Loading || string.IsNullOrWhiteSpace(_source))" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.FactCheck">Validate &amp; preview</MudButton><MudButton OnClick="Save" Disabled="@(Loading || _preview?.Validation.IsValid != true || _validatedSource != _source)" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Save">Save definition</MudButton></div><small class="muted">@(_revision.HasValue ? $"Editing revision {_revision}. Saving creates a new revision." : "Nothing is stored until you save a valid definition.")</small></section>
+    <section class="panel preview-panel"><MudTabs Rounded="true" Border="false"><MudTabPanel Text="Validation">@if (_preview is null) { <div class="empty-preview"><MudIcon Icon="@Icons.Material.Outlined.Rule" Size="Size.Large" /><h3>Ready when you are</h3><p>Validate your definition to check syntax, schema, and references.</p></div> } else { <ValidationView Result="_preview.Validation" /> }</MudTabPanel><MudTabPanel Text="Architecture">@if (_preview?.Diagram is not null) { <Diagram Markup="@_preview.Diagram" /> } else { <p class="empty-preview">Architecture appears after successful validation.</p> }</MudTabPanel><MudTabPanel Text="Documentation"><DocumentationView Document="_preview?.Documentation" /></MudTabPanel></MudTabs></section></div>
+}
+@code {
+    [Parameter] public string? Id { get; set; }
+    private string _source = "", _summary = "", _validatedSource = "";
+    private int? _revision;
+    private PreviewResult? _preview;
+    protected override async Task LoadAsync()
+    {
+        if (Id is null) return;
+        var detail = await Api.GetAsync<IntegrationDetail>($"/api/integrations/{Uri.EscapeDataString(Id)}");
+        _source = detail.OriginalDefinition; _revision = detail.Revision;
+    }
+    private void SourceChanged(ChangeEventArgs e) { _source = e.Value?.ToString() ?? ""; _preview = null; }
+    private async Task Upload(InputFileChangeEventArgs e)
+    {
+        await ExecuteAsync(async () =>
+        {
+            if (!new[] { ".json", ".yaml", ".yml" }.Contains(Path.GetExtension(e.File.Name).ToLowerInvariant())) { Error = "Choose a JSON or YAML file."; return; }
+            if (e.File.Size > 1_000_000) { Error = "Definitions must be smaller than 1 MB."; return; }
+            using var reader = new StreamReader(e.File.OpenReadStream(1_000_000));
+            _source = await reader.ReadToEndAsync(); _preview = null;
+        });
+    }
+    private Task Validate() => ExecuteAsync(async () => { _preview = await Api.SendAsync<PreviewResult>("POST", "/api/integrations/preview", new DefinitionRequest(_source, ChangeSummary: _summary, ExpectedRevision: _revision)); _validatedSource = _source; });
+    private Task Save() => ExecuteAsync(async () =>
+    {
+        if (_preview?.Validation.IsValid != true || _source != _validatedSource) return;
+        var result = await Api.SendAsync<IntegrationDetail>(Id is null ? "POST" : "PUT", Id is null ? "/api/integrations" : $"/api/integrations/{Uri.EscapeDataString(Id)}", new DefinitionRequest(_source, ChangeSummary: _summary, ExpectedRevision: _revision));
+        Navigation.NavigateTo($"/integrations/{result.Definition.Id.Value}");
+    });
+}

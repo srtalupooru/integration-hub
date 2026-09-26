@@ -1,0 +1,45 @@
+@page "/components/{Id}"
+@inherits ApiPage
+<PageTitle>Component · Integration Hub</PageTitle>
+<PageState Loading="Loading" Error="@Error" />
+@if (_detail is not null)
+{
+    var d = _detail.Definition;
+    <div class="page-heading"><div><div class="eyebrow">@d.Type · @d.Environment · REVISION @_detail.Revision</div><h1>@d.Name</h1><p>@d.Description</p></div><div class="button-row"><MudButton OnClick="Refresh">Refresh</MudButton>@if (Api.CanEdit && !_detail.IsArchived) { <MudButton Href="@($"/components/{Id}/edit")" Variant="Variant.Filled" Color="Color.Primary">Edit definition</MudButton> }@if (Api.IsAdmin) { <MudButton OnClick="@(() => _confirm = true)" Color="Color.Warning">@(_detail.IsArchived ? "Restore" : "Archive")</MudButton> }</div></div>
+    @if (_detail.IsArchived) { <MudAlert Severity="Severity.Info">Archived. This component is excluded from discovery; all revisions are retained.</MudAlert> }
+    @if (_confirm) { <section class="panel"><h2>@(_detail.IsArchived ? "Restore this component?" : "Archive this component?")</h2><p>Discovery will be recalculated. Related networks may split, merge or disappear; the historical definitions remain available.</p><div class="button-row"><MudButton OnClick="SetArchive" Disabled="Loading" Color="Color.Warning">Confirm @(_detail.IsArchived ? "restore" : "archive")</MudButton><MudButton OnClick="@(() => _confirm = false)">Cancel</MudButton></div></section> }
+    <section class="panel"><div class="tag-list"><span class="badge">@d.Status</span><span class="badge">@d.Criticality criticality</span><span class="badge">@d.Owner</span><span class="badge">@d.Technology</span></div><ComponentInteractions Definition="d" /></section>
+    <section class="panel mt-6"><h2>Discovered integrations</h2>
+        @if (_discovery is not null) { var networks = _discovery.Integrations.Where(i => i.Sources.Any(s => s.Id == Id)).ToArray();
+            @if (networks.Length == 0) { <p>No resolved integration yet. Review findings below or add the other components.</p> }
+            @foreach (var network in networks) { <div class="link-row"><a href="@($"/discovered/{network.Id}")">@network.Name →</a><span>@network.Connections.Count connections</span></div> }
+            <DiscoveryFindings Issues="@_discovery.Issues.Where(i => i.ComponentId == Id).ToArray()" />
+        }
+    </section>
+    <section class="panel mt-6"><h2>Source and revision history</h2><div class="button-row"><a href="@($"/api/components/{Id}/definition")" target="_blank">Original source ↗</a><a href="@($"/api/components/{Id}/definition?format=json")" target="_blank">Export JSON ↗</a><a href="@($"/api/components/{Id}/definition?format=yaml")" target="_blank">Export YAML ↗</a></div>
+        @foreach (var version in _versions) { <details class="component-history"><summary>Revision @version.Revision · @version.Timestamp.ToLocalTime().ToString("g") · @version.ChangedBy · @(version.IsArchived ? "Archived" : "Active") · @version.ChangeSummary</summary><pre class="definition-code">@version.OriginalDefinition</pre></details> }
+    </section>
+}
+@code {
+    [Parameter] public string Id { get; set; } = "";
+    private ComponentDetail? _detail;
+    private ComponentVersion[] _versions = [];
+    private DiscoveryResult? _discovery;
+    private bool _confirm;
+    protected override async Task LoadAsync()
+    {
+        _confirm = false;
+        _detail = null; _versions = []; _discovery = null;
+        _detail = await Api.GetAsync<ComponentDetail>($"/api/components/{Uri.EscapeDataString(Id)}");
+        _versions = await Api.GetAsync<ComponentVersion[]>($"/api/components/{Uri.EscapeDataString(Id)}/versions");
+        _discovery = await Api.GetAsync<DiscoveryResult>("/api/discovery");
+    }
+    private Task Refresh() => ExecuteAsync(LoadAsync);
+    private Task SetArchive() => ExecuteAsync(async () =>
+    {
+        if (_detail is null) return;
+        var path = $"/api/components/{Uri.EscapeDataString(Id)}" + (_detail.IsArchived ? "/restore" : "") + $"?expectedRevision={_detail.Revision}";
+        await Api.SendAsync<string>(_detail.IsArchived ? "POST" : "DELETE", path, null);
+        await LoadAsync();
+    });
+}

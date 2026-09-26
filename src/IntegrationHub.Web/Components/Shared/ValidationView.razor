@@ -1,0 +1,7 @@
+@if (Result is not null)
+{
+    <MudAlert Severity="@(Result.IsValid ? Severity.Success : Severity.Error)" Class="mb-4">@(Result.IsValid ? "Definition is valid and can be saved." : "Resolve the errors before saving.")</MudAlert>
+    @foreach (var issue in Result.Issues)
+    { <div class="validation-issue @issue.Severity.ToString().ToLowerInvariant()"><span class="badge">@issue.Level</span><strong>@issue.Code</strong><p>@issue.Message</p><small>@issue.Path @issue.NodeId @issue.EdgeId @issue.SuggestedResolution</small></div> }
+}
+@code { [Parameter] public ValidationResult? Result { get; set; } }

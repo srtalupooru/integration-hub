@@ -1,0 +1,19 @@
+# Import separately through Components > Add component.
+schemaVersion: "1.1"
+component:
+  id: procurement-system-dev
+  name: Procurement system
+  type: InternalSystem
+  environment: development
+  version: "1.0"
+  status: Development
+  domain: Procurement
+  owner: Procurement team
+  description: Calls the vendor API to create a vendor.
+  # Reference the API component ID and its exposed endpoint ID.
+  calls:
+    - id: create-vendor-request
+      targetComponent: vendor-api-dev
+      endpoint: create-vendor
+      method: POST
+      version: "1.0"

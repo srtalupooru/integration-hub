@@ -1,0 +1,1 @@
+<Project><Import Project="../Directory.Build.props" /><ItemGroup><Compile Include="$(MSBuildThisFileDirectory)TestDefinitions.cs" Link="TestDefinitions.cs" /></ItemGroup></Project>

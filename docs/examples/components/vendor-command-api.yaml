@@ -1,0 +1,29 @@
+# Optional command example; independent of the four-component event example.
+schemaVersion: "1.1"
+component:
+  id: vendor-command-api-dev
+  name: Vendor command API
+  type: Api
+  environment: development
+  version: "1.0"
+  status: Development
+  domain: Procurement
+  owner: Vendor platform team
+  technology: ASP.NET Core
+  description: Accepts an HTTP request and sends a vendor creation command to a queue.
+  endpoints:
+    - id: create-vendor
+      method: POST
+      path: /vendors
+      version: "1.0"
+  # Commands use sends; events use publishes.
+  sends:
+    - id: send-create-vendor
+      contract: vendors.create
+      version: "1.0"
+      messageType: Command
+      contentType: application/json
+      channel:
+        kind: Queue
+        namespace: procurement-dev.servicebus.windows.net
+        name: vendor-commands

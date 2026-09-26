@@ -1,0 +1,30 @@
+# Import separately through Components > Add component.
+schemaVersion: "1.1"
+component:
+  id: vendor-api-dev
+  name: Vendor API
+  type: Api
+  environment: development
+  version: "1.0"
+  status: Development
+  domain: Procurement
+  owner: Vendor platform team
+  technology: ASP.NET Core
+  description: Accepts vendor creation requests and publishes vendor-created events.
+  # HTTP requests are represented as endpoints, not consumed broker messages.
+  endpoints:
+    - id: create-vendor
+      method: POST
+      path: /vendors
+      version: "1.0"
+  # The function declares the same event contract, version and topic.
+  publishes:
+    - id: vendor-created
+      contract: vendors.created
+      version: "1.0"
+      messageType: Event
+      contentType: application/json
+      channel:
+        kind: Topic
+        namespace: procurement-dev.servicebus.windows.net
+        name: vendor-events

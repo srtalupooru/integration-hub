@@ -1,0 +1,75 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<section class="graph-viewer" @ref="_element" aria-label="Integration graph">
+    <div class="graph-toolbar" role="group" aria-label="Graph controls">
+        <div class="graph-toolbar-group">
+            <button type="button" data-graph-action="zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
+            <output data-graph-zoom aria-label="Zoom level">100%</output>
+            <button type="button" data-graph-action="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+            <button type="button" data-graph-action="fit" title="Fit the whole graph in view">Fit</button>
+            <button type="button" data-graph-action="actual" title="Show at original size">100%</button>
+        </div>
+        <div class="graph-toolbar-group">
+            <label for="@(_id + "-layout")">Layout</label>
+            <select id="@(_id + "-layout")" data-graph-layout>
+                <option value="LR">Horizontal</option>
+                <option value="TB">Vertical</option>
+            </select>
+            <button type="button" data-graph-action="fullscreen">Fullscreen</button>
+            <button type="button" data-graph-action="download">Download SVG</button>
+        </div>
+    </div>
+    <div class="graph-viewport" data-graph-viewport tabindex="0" role="region" aria-label="Graph canvas" aria-describedby="@(_id + "-help")" aria-busy="true">
+        <div class="graph-stage" data-graph-stage></div>
+        <div class="graph-status" data-graph-status role="status">Loading graph…</div>
+    </div>
+    <div class="graph-legend" aria-label="Graph legend">
+        <span><i class="graph-key graph-key-system"></i>Systems</span>
+        <span><i class="graph-key graph-key-api"></i>APIs</span>
+        <span><i class="graph-key graph-key-messaging"></i>Messaging</span>
+        <span><i class="graph-key graph-key-function"></i>Functions</span>
+        <span><i class="graph-key graph-key-compute"></i>Workflows &amp; processing</span>
+        <span><i class="graph-key graph-key-data"></i>Data stores</span>
+        <span><i class="graph-key graph-key-other"></i>Other</span>
+        <span>Dashed border: optional</span>
+        <span>Dotted arrow: asynchronous</span>
+    </div>
+    <p class="graph-help" id="@(_id + "-help")">Drag to pan · Ctrl/⌘ + scroll to zoom · Double-click to fit. Keyboard: arrows to pan, +/− to zoom, 0 to fit.</p>
+    @if (_error is not null)
+    {
+        <div class="graph-fallback" role="alert"><p>@_error</p><pre>@Markup</pre></div>
+    }
+</section>
+
+@code {
+    [Parameter] public string Markup { get; set; } = "";
+    private readonly string _id = "graph-" + Guid.NewGuid().ToString("N");
+    private ElementReference _element;
+    private string? _rendered;
+    private string? _error;
+    private bool _started;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_rendered == Markup) return;
+        _rendered = Markup;
+        _error = null;
+        _started = true;
+        try { await JS.InvokeVoidAsync("hub.diagram", _element, Markup, _id); }
+        catch (JSDisconnectedException) { }
+        catch (JSException)
+        {
+            _error = "The graph viewer could not load. Generated Mermaid is shown below.";
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!_started) return;
+        try { await JS.InvokeVoidAsync("hub.disposeDiagram", _id); }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+}

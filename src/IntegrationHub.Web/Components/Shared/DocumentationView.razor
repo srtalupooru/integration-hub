@@ -1,0 +1,7 @@
+@if (Document is not null)
+{
+    <div class="documentation"><h2>@Document.Name</h2><p>@Document.Description</p>
+    @foreach (var part in Document.Sections) { <section><h3>@part.Title</h3><ul>@foreach (var line in part.Lines) { <li>@line</li> }</ul></section> }
+    </div>
+}
+@code { [Parameter] public IntegrationDocumentation? Document { get; set; } }

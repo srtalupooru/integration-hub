@@ -1,0 +1,40 @@
+@page "/integrations"
+@page "/search"
+@inherits ApiPage
+@inject NavigationManager Navigation
+<PageTitle>Integration catalogue · Integration Hub</PageTitle>
+<div class="catalogue-modes"><strong>All integrations</strong><a href="/discovered">Discovery findings →</a><a href="/components">Component definitions →</a></div>
+<div class="page-heading"><div><div class="eyebrow">EXPLORE YOUR LANDSCAPE</div><h1>@(Navigation.Uri.Contains("/search") ? "Search the catalogue" : "Integrations")</h1><p>Browse authored definitions and integrations discovered from your components.</p></div><MudButton Href="/import" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add">Import definition</MudButton></div>
+<div class="panel catalogue-toolbar"><div class="search-row"><MudSelect T="string" Value="@_kind" ValueChanged="ChangeKind" Label="Integration kind" Variant="Variant.Outlined" Margin="Margin.Dense"><MudSelectItem Value="@("All")">All integrations</MudSelectItem><MudSelectItem Value="@("Authored")">Authored</MudSelectItem><MudSelectItem Value="@("Discovered")">Discovered</MudSelectItem></MudSelect><MudTextField T="string" @bind-Value="_q" Label="Search name, system, message, technology, owner…" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" /><MudButton OnClick="Search" Variant="Variant.Filled" Color="Color.Primary">Search</MudButton><MudIconButton Icon="@(_table ? Icons.Material.Outlined.GridView : Icons.Material.Outlined.TableRows)" OnClick="@(() => _table = !_table)" title="Toggle card or table view" /></div><details class="filters"><summary>Filter integrations</summary><div class="filter-grid"><MudSelect T="string" @bind-Value="_status" Label="Status" Clearable="true">@foreach (var status in Enum.GetNames<IntegrationStatus>()) { <MudSelectItem Value="@status">@status</MudSelectItem> }</MudSelect><MudSelect T="string" @bind-Value="_criticality" Label="Criticality" Clearable="true">@foreach (var value in Enum.GetNames<Criticality>()) { <MudSelectItem Value="@value">@value</MudSelectItem> }</MudSelect><MudTextField @bind-Value="_domain" Label="Domain" /><MudTextField @bind-Value="_owner" Label="Owner" /><MudTextField @bind-Value="_tag" Label="Tag" /><MudTextField @bind-Value="_technology" Label="Technology" /><MudTextField @bind-Value="_system" Label="System" /><MudTextField @bind-Value="_source" Label="Source" /><MudTextField @bind-Value="_destination" Label="Destination" /></div><div class="button-row"><MudButton OnClick="Search" Color="Color.Primary">Apply filters</MudButton><MudButton OnClick="Clear">Clear filters</MudButton></div></details></div>
+<PageState Loading="Loading" Error="@Error" />
+@if (_results is not null)
+{
+    <div class="results-heading"><span><strong>@_results.Total</strong> integrations</span><span>Last updated first</span></div>
+    @if (_results.Items.Count == 0) { <div class="panel empty-state"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" Size="Size.Large" /><h2>No integrations found</h2><p>Try another search, import a definition, or add components with matching calls or messages.</p><MudButton Href="/import" Color="Color.Primary">Import definition →</MudButton><MudButton Href="/components" Color="Color.Primary">View components →</MudButton></div> }
+    else if (_table)
+    {
+        <div class="panel table-scroll"><table><thead><tr><th>Integration</th><th>Kind</th><th>Status</th><th>Domain</th><th>Owner</th><th>Criticality</th><th>Updated</th></tr></thead><tbody>@foreach (var entry in _results.Items) { var item = entry.Summary; <tr><td><a href="@entry.DetailUrl">@item.Name</a><small>@(entry.Origin == "Discovered" ? "Generated from components" : $"v{item.Version}")</small></td><td>@entry.Origin</td><td><span class="badge">@item.Status</span></td><td>@item.BusinessDomain</td><td>@item.Owner</td><td>@item.Criticality</td><td>@item.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy")</td></tr> }</tbody></table></div>
+    }
+    else
+    {
+        <div class="catalogue-grid">@foreach (var entry in _results.Items) { var item = entry.Summary; <a class="integration-card" href="@entry.DetailUrl"><div class="card-top"><span class="integration-icon"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /></span><span class="badge @item.Status.ToLowerInvariant()">@item.Status</span></div><span class="badge">@entry.Origin</span><h2>@item.Name</h2><p>@item.Description</p><div class="card-meta"><span>@item.BusinessDomain</span><span>@item.Criticality criticality</span></div><div class="tag-list">@foreach (var tag in item.Tags.Take(4)) { <span class="tag">@tag</span> }</div><div class="card-bottom"><span>@item.Owner</span><span>@(entry.Origin == "Discovered" ? "Explore connections →" : $"v{item.Version} →")</span></div></a> }</div>
+    }
+    @if (_results.Total > 24) { <div class="pagination"><MudButton Disabled="@(_page == 1)" OnClick="Previous">Previous</MudButton><span>Page @_page of @((int)Math.Ceiling(_results.Total / 24.0))</span><MudButton Disabled="@(_page * 24 >= _results.Total)" OnClick="Next">Next</MudButton></div> }
+}
+@code {
+    private string _q = "", _status = "", _criticality = "", _domain = "", _owner = "", _tag = "", _technology = "", _system = "", _source = "", _destination = "";
+    private int _page = 1;
+    protected bool _table;
+    private string _kind = "All";
+    private PagedResult<CatalogueEntry>? _results;
+    protected override async Task LoadAsync()
+    {
+        var filters = new Dictionary<string, string> { ["kind"] = _kind, ["q"] = _q, ["status"] = _status, ["criticality"] = _criticality, ["domain"] = _domain, ["owner"] = _owner, ["tag"] = _tag, ["technology"] = _technology, ["system"] = _system, ["source"] = _source, ["destination"] = _destination, ["page"] = _page.ToString() };
+        _results = await Api.GetAsync<PagedResult<CatalogueEntry>>("/api/catalogue?" + string.Join("&", filters.Where(p => !string.IsNullOrEmpty(p.Value)).Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value)}")));
+    }
+    private Task ChangeKind(string kind) { _kind = kind; return Search(); }
+    private Task Search() { _page = 1; return ExecuteAsync(LoadAsync); }
+    private Task Clear() { _kind = "All"; _q = _status = _criticality = _domain = _owner = _tag = _technology = _system = _source = _destination = ""; return Search(); }
+    private Task Previous() { _page--; return ExecuteAsync(LoadAsync); }
+    private Task Next() { _page++; return ExecuteAsync(LoadAsync); }
+}

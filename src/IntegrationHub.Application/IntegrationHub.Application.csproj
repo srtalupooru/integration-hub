@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<ItemGroup><ProjectReference Include="../IntegrationHub.Domain/IntegrationHub.Domain.csproj" /><ProjectReference Include="../IntegrationHub.Contracts/IntegrationHub.Contracts.csproj" /></ItemGroup>
+<ItemGroup><PackageReference Include="FluentValidation" Version="11.11.0" /><PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" /><PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" /></ItemGroup>
+</Project>

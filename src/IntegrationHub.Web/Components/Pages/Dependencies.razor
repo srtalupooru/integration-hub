@@ -1,0 +1,30 @@
+@page "/dependencies"
+@inherits ApiPage
+<PageTitle>Dependency analysis · Integration Hub</PageTitle>
+<div class="page-heading"><div><div class="eyebrow">UNDERSTAND THE CONNECTIONS</div><h1>Dependencies &amp; impact</h1><p>Trace upstream dependencies, downstream systems, and affected integrations.</p></div></div>
+<PageState Loading="Loading" Error="@Error" />
+@if (_graph is not null && _graph.Nodes.Count == 0) { <div class="panel empty-state"><MudIcon Icon="@Icons.Material.Outlined.Hub" Size="Size.Large" /><h2>Your dependency graph starts with a definition</h2><p>Import integrations to explore their relationships and shared components.</p><MudButton Href="/import" Color="Color.Primary">Import definition →</MudButton></div> }
+else if (_graph is not null)
+{
+    <div class="panel search-row"><MudSelect T="string" @bind-Value="_component" Label="Select a system, component, message, or integration" Variant="Variant.Outlined">@foreach (var node in _graph.Nodes) { <MudSelectItem Value="@node.Id">@node.Name · @node.Kind · @node.Id</MudSelectItem> }</MudSelect><MudButton OnClick="Analyze" Disabled="@(Loading || string.IsNullOrEmpty(_component))" Color="Color.Primary" Variant="Variant.Filled">Analyze impact</MudButton></div>
+    @if (_impact is not null)
+    {
+        <div class="results-heading"><span>Analysis for <strong>@_impact.ComponentId</strong></span><span>@_impact.AffectedIntegrations.Count affected integrations</span></div>
+        <div class="impact-grid"><section class="panel"><h2>Upstream dependencies</h2>@foreach (var node in _impact.Upstream) { <button class="graph-node-button" @onclick="@(() => SelectNode(node.Id))"><span class="badge">@node.Kind</span>@node.Name</button> }@if (_impact.Upstream.Count == 0) { <p>No upstream dependencies.</p> }</section><section class="panel"><h2>Downstream components</h2>@foreach (var node in _impact.Downstream) { <button class="graph-node-button" @onclick="@(() => SelectNode(node.Id))"><span class="badge">@node.Kind</span>@node.Name</button> }@if (_impact.Downstream.Count == 0) { <p>No downstream components.</p> }</section><section class="panel"><h2>Affected integrations</h2>@foreach (var id in _impact.AffectedIntegrations) { <div class="link-row"><a href="@CatalogueLinks.Integration(id)">@id →</a><span class="badge">@(_impact.DirectIntegrations.Contains(id) ? "Direct" : "Indirect")</span></div> }<h3>Dependent systems</h3>@foreach (var node in _impact.DependentSystems) { <p>@node.Name</p> }</section></div>
+    }
+    <section class="panel mt-6"><h2>Global relationship graph</h2><p class="muted">@_graph.Nodes.Count components · @_graph.Edges.Count relationships. Shared identities connect definitions; identical names alone do not.</p><Diagram Markup="@_diagram" /><details><summary>Relationship table</summary><div class="table-scroll"><table><thead><tr><th>From</th><th>Relationship</th><th>To</th><th>Integration</th></tr></thead><tbody>@foreach (var edge in _graph.Edges) { <tr><td>@edge.From</td><td>@edge.Kind</td><td>@edge.To</td><td><a href="@CatalogueLinks.Integration(edge.IntegrationId)">@edge.IntegrationId</a></td></tr> }</tbody></table></div></details></section>
+}
+@code {
+    [SupplyParameterFromQuery(Name = "component")] public string? Component { get; set; }
+    private string _component = "", _diagram = "";
+    private GlobalGraph? _graph;
+    private ImpactResult? _impact;
+    protected override async Task LoadAsync()
+    {
+        _graph = await Api.GetAsync<GlobalGraph>("/api/dependencies");
+        _diagram = await Api.GetAsync<string>("/api/dependencies/diagram");
+        if (Component is not null) { _component = Component; _impact = await Api.GetAsync<ImpactResult>("/api/impact?componentId=" + Uri.EscapeDataString(_component)); }
+    }
+    private Task Analyze() => ExecuteAsync(async () => _impact = await Api.GetAsync<ImpactResult>("/api/impact?componentId=" + Uri.EscapeDataString(_component)));
+    private Task SelectNode(string id) { _component = id; return Analyze(); }
+}

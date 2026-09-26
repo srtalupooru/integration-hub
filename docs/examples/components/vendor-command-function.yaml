@@ -1,0 +1,34 @@
+# Optional command example; import with vendor-command-api.yaml.
+schemaVersion: "1.1"
+component:
+  id: vendor-command-worker-dev
+  name: Vendor command worker
+  type: AzureFunction
+  environment: development
+  version: "1.0"
+  status: Development
+  domain: Procurement
+  owner: Integration team
+  technology: Azure Functions
+  description: Consumes the creation command and publishes the completed event.
+  consumes:
+    - id: handle-create-vendor
+      contract: vendors.create
+      version: "1.0"
+      messageType: Command
+      contentType: application/json
+      channel:
+        kind: Queue
+        namespace: procurement-dev.servicebus.windows.net
+        name: vendor-commands
+  # No completion-event consumer is included: an unconsumed finding is expected.
+  publishes:
+    - id: vendor-created
+      contract: vendors.command-created
+      version: "1.0"
+      messageType: Event
+      contentType: application/json
+      channel:
+        kind: Topic
+        namespace: procurement-dev.servicebus.windows.net
+        name: vendor-command-results

@@ -1,0 +1,32 @@
+# Import separately through Components > Add component.
+schemaVersion: "1.1"
+component:
+  id: vendor-sync-function-dev
+  name: Vendor sync function
+  type: AzureFunction
+  environment: development
+  version: "1.0"
+  status: Development
+  domain: Procurement
+  owner: Integration team
+  technology: Azure Functions
+  description: Consumes vendor-created events and sends an upsert request to Elite.
+  # These route fields match the Vendor API publication exactly.
+  consumes:
+    - id: on-vendor-created
+      contract: vendors.created
+      version: "1.0"
+      messageType: Event
+      contentType: application/json
+      channel:
+        kind: Topic
+        namespace: procurement-dev.servicebus.windows.net
+        name: vendor-events
+      subscription: elite-vendor-sync
+  # Outbound HTTP uses calls rather than a published Request message.
+  calls:
+    - id: upsert-elite-vendor
+      targetComponent: elite-api-dev
+      endpoint: upsert-vendor
+      method: PUT
+      version: "1.0"

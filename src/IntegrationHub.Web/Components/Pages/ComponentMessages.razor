@@ -1,0 +1,16 @@
+@page "/component-messages"
+@inherits ApiPage
+<PageTitle>Component messages · Integration Hub</PageTitle>
+<div class="page-heading"><div><div class="eyebrow">MESSAGE CONTRACTS</div><h1>Component messages</h1><p>Published events, sent commands and consumed messages, including unresolved declarations. HTTP calls and exposed endpoints are listed on the component pages.</p></div><MudButton Href="/discovered" Color="Color.Primary">View discovered flows →</MudButton></div>
+<div class="catalogue-modes"><a href="/messages">Authored integration messages</a><strong>Component messages</strong></div>
+<div class="panel search-row"><MudTextField @bind-Value="_query" Immediate="true" Label="Search contract, component, channel or environment" /><MudButton OnClick="Refresh">Refresh</MudButton></div>
+<PageState Loading="Loading" Error="@Error" />
+@if (_items is not null) { var filtered = _items.Where(i => $"{i.Binding.Contract} {i.Binding.Version} {i.ComponentId} {i.Environment} {i.Binding.Channel.Namespace} {i.Binding.Channel.Name}".Contains(_query, StringComparison.OrdinalIgnoreCase)).ToArray();
+    <p class="muted">@filtered.Length bindings</p><div class="panel table-scroll"><table><thead><tr><th>Contract / version</th><th>Component</th><th>Direction</th><th>Environment</th><th>Channel</th></tr></thead><tbody>@foreach (var i in filtered) { <tr><td>@i.Binding.Contract v@i.Binding.Version<small>@i.Binding.MessageType</small></td><td><a href="@($"/components/{i.ComponentId}")">@i.ComponentName</a><small>@i.Binding.Id</small></td><td>@i.Direction</td><td>@i.Environment</td><td>@i.Binding.Channel.Kind · @i.Binding.Channel.Namespace / @i.Binding.Channel.Name<small>@i.Binding.Subscription</small></td></tr> }</tbody></table></div>
+}
+@code {
+    private ComponentMessageOccurrence[]? _items;
+    private string _query = "";
+    protected override async Task LoadAsync() => _items = await Api.GetAsync<ComponentMessageOccurrence[]>("/api/component-messages");
+    private Task Refresh() => ExecuteAsync(LoadAsync);
+}

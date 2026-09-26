@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+<ItemGroup><FrameworkReference Include="Microsoft.AspNetCore.App" /></ItemGroup>
+<ItemGroup><ProjectReference Include="../IntegrationHub.Contracts/IntegrationHub.Contracts.csproj" /></ItemGroup>
+<ItemGroup><PackageReference Include="MudBlazor" Version="8.15.0" /></ItemGroup>
+</Project>

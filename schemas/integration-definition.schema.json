@@ -1,0 +1,626 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://integrationhub.local/schemas/integration-definition.schema.json",
+  "title": "Integration Hub definition v1",
+  "type": "object",
+  "properties": {
+    "integration": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Draft",
+            "Development",
+            "Test",
+            "Production",
+            "Deprecated",
+            "Retired"
+          ]
+        },
+        "domain": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "criticality": {
+          "type": "string",
+          "enum": [
+            "Low",
+            "Medium",
+            "High",
+            "Critical"
+          ]
+        },
+        "ownership": {
+          "type": "object",
+          "properties": {
+            "team": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "supportTeam": {
+              "type": "string",
+              "maxLength": 20000
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "environment": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 100
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "maxLength": 128
+          },
+          "maxItems": 2000
+        },
+        "destinations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "maxLength": 128
+          },
+          "maxItems": 2000
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 2000,
+          "minItems": 1
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          },
+          "maxItems": 5000
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]*$",
+                "maxLength": 128
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "parentId": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]*$",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 2000
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/message"
+          },
+          "maxItems": 2000
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/message"
+          },
+          "maxItems": 2000
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "integrationId": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]*$",
+                "maxLength": 128
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 20000
+              }
+            },
+            "required": [
+              "integrationId"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 2000
+        },
+        "repositories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          },
+          "maxItems": 2000
+        },
+        "runbooks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          },
+          "maxItems": 2000
+        },
+        "contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 20000
+              },
+              "role": {
+                "type": "string",
+                "maxLength": 20000
+              },
+              "email": {
+                "type": "string",
+                "maxLength": 20000
+              }
+            },
+            "required": [
+              "name",
+              "email"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 2000
+        },
+        "metadata": {
+          "type": "object",
+          "maxProperties": 100,
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 20000
+          }
+        },
+        "reliability": {
+          "type": "object",
+          "properties": {
+            "retries": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "deadLetterQueue": {
+              "type": "boolean"
+            },
+            "idempotency": {
+              "type": "boolean"
+            },
+            "errorHandling": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "deadLetterHandling": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 20000
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "monitoring": {
+          "type": "object",
+          "properties": {
+            "applicationInsights": {
+              "type": "boolean"
+            },
+            "alertsEnabled": {
+              "type": "boolean"
+            },
+            "logging": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "alerting": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "dashboardUrl": {
+              "anyOf": [
+                {
+                  "const": ""
+                },
+                {
+                  "type": "string",
+                  "maxLength": 2048,
+                  "pattern": "^https?://[^\\s]+$"
+                }
+              ]
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "security": {
+          "type": "object",
+          "properties": {
+            "authentication": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "dataClassification": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "encryption": {
+              "type": "string",
+              "maxLength": 20000
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 20000
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "version",
+        "status",
+        "nodes",
+        "edges"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "integration"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "node": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "ExternalSystem",
+            "InternalSystem",
+            "Api",
+            "ApiManagement",
+            "ServiceBusTopic",
+            "ServiceBusQueue",
+            "AzureFunction",
+            "LogicApp",
+            "Database",
+            "Storage",
+            "EventGrid",
+            "Library",
+            "NuGetPackage",
+            "Sftp",
+            "FileShare",
+            "SaaS",
+            "MessageBroker",
+            "Transformation",
+            "ManualProcess",
+            "Custom"
+          ]
+        },
+        "customType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "systemId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "maxLength": 128
+        },
+        "sharedResourceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "groupId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "maxLength": 128
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "repositoryUrl": {
+          "type": "string",
+          "maxLength": 2048,
+          "pattern": "^https?://[^\\s]+$"
+        },
+        "documentationUrl": {
+          "type": "string",
+          "maxLength": 2048,
+          "pattern": "^https?://[^\\s]+$"
+        },
+        "runtimeReferences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "resourceId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "kind",
+              "resourceId"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 2000
+        },
+        "metadata": {
+          "type": "object",
+          "maxProperties": 100,
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 20000
+          }
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "technology": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "owner": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "environment": {
+          "type": "string",
+          "maxLength": 20000
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "edge": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "maxLength": 128
+        },
+        "from": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "maxLength": 128
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "maxLength": 128
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "protocol": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "transportType": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "authenticationType": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "retryBehaviour": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "messageName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "Forward",
+            "Bidirectional"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "Synchronous",
+            "Asynchronous"
+          ]
+        },
+        "metadata": {
+          "type": "object",
+          "maxProperties": 100,
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 20000
+          }
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "additionalProperties": false
+    },
+    "message": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Event",
+            "Command",
+            "Document",
+            "Request",
+            "Response"
+          ]
+        },
+        "producer": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "maxLength": 128
+        },
+        "consumers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "maxLength": 128
+          },
+          "maxItems": 2000
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "schema": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "topicOrQueue": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "contentType": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "examplePayload": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "documentation": {
+          "type": "string",
+          "maxLength": 20000
+        }
+      },
+      "required": [
+        "name",
+        "producer",
+        "consumers"
+      ],
+      "additionalProperties": false
+    },
+    "link": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 2048,
+          "pattern": "^https?://[^\\s]+$"
+        }
+      },
+      "required": [
+        "name",
+        "url"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
