@@ -1,24 +1,27 @@
 @page "/discovered/{Id}"
 @inherits ApiPage
 <PageTitle>Discovered integration · Integration Hub</PageTitle>
+<a class="breadcrumb" href="/integrations">← Integrations</a>
 <PageState Loading="Loading" Error="@Error" />
 @if (_view is not null)
 {
     var i = _view.Integration;
-    <div class="page-heading"><div><div class="eyebrow">DISCOVERED · @i.Environment</div><h1>@i.Name</h1><p>@i.Definition.Description</p></div><MudButton OnClick="Refresh">Refresh</MudButton></div>
-    <MudAlert Severity="Severity.Info">To change this integration, edit its source components. HTTP calls reference a target component and endpoint with matching method, version and environment. Messaging matches contracts and channels. Network IDs change when membership splits or merges.</MudAlert>
-    <section class="panel mt-6"><MudTabs>
+    <div class="page-heading"><div><div class="eyebrow">DISCOVERED · @i.Environment</div><h1>@i.Name</h1><p>@i.Sources.Count components connected through @i.Connections.Count HTTP calls and message routes.</p></div><MudButton OnClick="Refresh">Refresh</MudButton></div>
+    <div class="detail-summary"><div><small>ENVIRONMENT</small><strong>@i.Environment</strong></div><div><small>COMPONENTS</small><strong>@i.Sources.Count</strong></div><div><small>CONNECTIONS</small><strong>@i.Connections.Count</strong></div><div><small>FINDINGS TO REVIEW</small><strong>@i.Issues.Count</strong></div></div>
+    <div class="notice-strip"><MudIcon Icon="@Icons.Material.Outlined.AutoGraph" /><p>This integration is generated from your components. Edit a source component to update its connections.</p></div>
+    <section class="panel detail-tabs"><MudTabs>
         <MudTabPanel Text="Architecture"><Diagram Markup="@_view.Diagram" /></MudTabPanel>
-        <MudTabPanel Text="Matching evidence"><div class="table-scroll"><table><thead><tr><th>From / declaration</th><th>To / declaration</th><th>Interaction</th><th>Channel / delivery</th></tr></thead><tbody>@foreach (var c in i.Connections) { <tr><td><a href="@($"/components/{c.ProducerId}")">@c.ProducerId</a><small>@c.PublishBindingId</small></td><td><a href="@($"/components/{c.ConsumerId}")">@c.ConsumerId</a><small>@c.ConsumeBindingId</small></td><td>@InteractionLabels.Describe(c)</td><td>@c.Channel.Kind · @c.Channel.Namespace / @c.Channel.Name<small>@c.Delivery · @c.Subscription</small></td></tr> }</tbody></table></div></MudTabPanel>
+        <MudTabPanel Text="Connections"><div class="table-scroll"><table><thead><tr><th>From</th><th>To</th><th>Interaction</th><th>Channel / delivery</th></tr></thead><tbody>@foreach (var c in i.Connections) { <tr><td><a href="@($"/components/{c.ProducerId}")">@ComponentName(c.ProducerId)</a><small>@c.PublishBindingId</small></td><td><a href="@($"/components/{c.ConsumerId}")">@ComponentName(c.ConsumerId)</a><small>@c.ConsumeBindingId</small></td><td>@InteractionLabels.Describe(c)</td><td>@c.Channel.Kind · @c.Channel.Namespace / @c.Channel.Name<small>@c.Delivery · @c.Subscription</small></td></tr> }</tbody></table></div></MudTabPanel>
         <MudTabPanel Text="Documentation"><DocumentationView Document="_view.Documentation" /></MudTabPanel>
         <MudTabPanel Text="Findings"><DiscoveryFindings Issues="i.Issues" /></MudTabPanel>
     </MudTabs></section>
-    <section class="panel mt-6"><h2>Source component revisions</h2><p class="muted">This view is derived from the following saved revisions. Refresh after editing a component.</p><div class="table-scroll"><table><thead><tr><th>Component</th><th>Revision</th><th>Definition SHA-256</th></tr></thead><tbody>@foreach (var source in i.Sources) { <tr><td><a href="@($"/components/{source.Id}")">@source.Name</a></td><td>@source.Revision</td><td><code>@source.DefinitionHash</code></td></tr> }</tbody></table></div><div class="button-row"><a href="@($"/api/discovery/{Id}/definition?format=yaml")" target="_blank">Snapshot YAML ↗</a><a href="@($"/api/discovery/{Id}/definition?format=json")" target="_blank">Snapshot JSON ↗</a><a href="@($"/api/discovery/{Id}/documentation?format=markdown")" target="_blank">Markdown documentation ↗</a><a href="/dependencies">Explore dependency impact →</a></div></section>
+    <section class="panel mt-6"><h2>Components in this integration</h2><p class="muted">Open a component to review or update its definition. Refresh this integration after saving changes.</p><div class="table-scroll"><table><thead><tr><th>Component</th><th>Revision</th><th>Verification</th></tr></thead><tbody>@foreach (var source in i.Sources) { <tr><td><a href="@($"/components/{source.Id}")">@source.Name</a></td><td>@source.Revision</td><td><details><summary>Definition fingerprint</summary><code>@source.DefinitionHash</code></details></td></tr> }</tbody></table></div><div class="button-row"><a href="@($"/api/discovery/{Id}/definition?format=yaml")" target="_blank">Snapshot YAML ↗</a><a href="@($"/api/discovery/{Id}/definition?format=json")" target="_blank">Snapshot JSON ↗</a><a href="@($"/api/discovery/{Id}/documentation?format=markdown")" target="_blank">Markdown documentation ↗</a><a href="/dependencies">Explore dependency impact →</a></div></section>
 }
-<p><a href="/discovered">← All discovered integrations</a></p>
+
 @code {
     [Parameter] public string Id { get; set; } = "";
     private DiscoveredIntegrationView? _view;
     protected override async Task LoadAsync() { _view = null; _view = await Api.GetAsync<DiscoveredIntegrationView>($"/api/discovery/{Uri.EscapeDataString(Id)}"); }
+    private string ComponentName(string id) => _view?.Integration.Sources.FirstOrDefault(s => s.Id == id)?.Name ?? id;
     private Task Refresh() => ExecuteAsync(LoadAsync);
 }

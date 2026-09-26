@@ -2,32 +2,39 @@
 @page "/components/{Id}/edit"
 @inherits ApiPage
 @inject NavigationManager Navigation
+<a class="breadcrumb" href="/components">← Components</a>
 <PageTitle>Component definition · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">HTTP AND MESSAGE DISCOVERY</div><h1>@(Id is null ? "Add a component" : "Edit component")</h1><p>Define exposed endpoints, outbound calls, sent commands, published events and consumed messages. Preview shows how the catalogue would change.</p></div><a href="/api/component-schema" target="_blank">Component schema ↗</a></div>
+<div class="page-heading"><div><div class="eyebrow">COMPONENT DEFINITION</div><h1>@(Id is null ? "Add a component" : "Edit component")</h1><p>Describe one API, function, or system. Check its connections, then save it to your catalogue.</p></div><a href="/api/component-schema" target="_blank">Component schema ↗</a></div>
 <PageState Loading="Loading" Error="@Error" />
 @if (!Loading && !Api.CanEdit) { <MudAlert Severity="Severity.Info">An Editor or Admin role is required to save component definitions.</MudAlert> }
 else
 {
+    <ol class="editor-progress" aria-label="Authoring steps"><li><span>1</span> Write or upload</li><li><span>2</span> Validate &amp; review</li><li><span>3</span> Save component</li></ol>
     <div class="editor-grid"><section class="panel editor-panel">
         <h2>Component definition</h2>
-        @if (Id is null) { <div class="button-row"><MudButton OnClick="@(() => Example("vendor-system"))">Caller example</MudButton><MudButton OnClick="@(() => Example("vendor-api"))">API example</MudButton><MudButton OnClick="@(() => Example("vendor-function"))">Function example</MudButton><MudButton OnClick="@(() => Example("elite-api"))">Receiver example</MudButton><MudButton OnClick="@(() => Example("vendor-command-api"))">Command API example</MudButton><MudButton OnClick="@(() => Example("vendor-command-function"))">Command worker example</MudButton></div><p class="muted">Example buttons replace the editor text. Edit the examples to match your own contracts and channels.</p> }
+        @if (Id is null) { <details class="quiet-details"><summary>Start from a sample definition</summary><div class="button-row"><MudButton OnClick="@(() => Example("vendor-system"))">Caller example</MudButton><MudButton OnClick="@(() => Example("vendor-api"))">API example</MudButton><MudButton OnClick="@(() => Example("vendor-function"))">Function example</MudButton><MudButton OnClick="@(() => Example("elite-api"))">Receiver example</MudButton><MudButton OnClick="@(() => Example("vendor-command-api"))">Command API example</MudButton><MudButton OnClick="@(() => Example("vendor-command-function"))">Command worker example</MudButton></div><p class="muted">Example buttons replace the editor text. Edit the examples to match your own contracts and channels.</p></details> }
         <label class="upload-label">Choose JSON or YAML <InputFile OnChange="Upload" accept=".json,.yaml,.yml" /></label>
         <label for="component-source" class="sr-only">Component definition</label><textarea id="component-source" class="source-editor" value="@_source" @oninput="Changed" spellcheck="false" placeholder="component:&#10;  id: vendor-api-dev&#10;  ..."></textarea>
-        <MudTextField @bind-Value="_summary" Label="Change summary" Variant="Variant.Outlined" />
+        <details class="quiet-details"><summary>YAML formatting help</summary><p>Indent fields beneath <code>component:</code> with two spaces. Indent list fields beneath their item. HTTP paths start with <code>/</code>; contract names use lowercase, such as <code>invoice.created</code>.</p><pre>component:
+  id: invoice-api
+  name: Invoice API
+  type: Api
+  environment: development</pre></details>
+        <MudTextField @bind-Value="_summary" Label="Change summary (optional)" Class="mt-4" Variant="Variant.Outlined" />
         <div class="editor-actions"><MudButton OnClick="Preview" Disabled="@(Loading || string.IsNullOrWhiteSpace(_source))" Variant="Variant.Outlined" Color="Color.Primary">Validate &amp; preview links</MudButton><MudButton OnClick="Save" Disabled="@(Loading || _preview?.Validation.IsValid != true || _validated != _source)" Variant="Variant.Filled" Color="Color.Primary">Save component</MudButton></div>
         <p class="muted">@(_revision is null ? "Nothing is stored until you save." : $"Editing revision {_revision}. A stale revision cannot overwrite another author's changes.") Unresolved messages can be saved; add the other components later.</p>
     </section><section class="panel preview-panel">
-        <h2>Validation and discovery preview</h2>
-        @if (_preview is null) { <p class="muted">Validate to see matching connections and findings.</p> }
+        <h2>Review your component</h2>
+        @if (_preview is null) { <div class="preview-empty"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /><h3>See how it connects</h3><p>Choose Validate &amp; preview links to check your definition and find matching components.</p></div> }
         else
         {
             <ValidationView Result="_preview.Validation" />
             @if (_preview.Discovery is not null && _preview.Definition is not null)
             {
                 var related = _preview.Discovery.Integrations.Where(i => i.Sources.Any(s => s.Id == _preview.Definition.Id)).ToArray();
-                <p><strong>@related.Sum(i => i.Connections.Count)</strong> connections in this component's discovered networks.</p>
-                <p class="muted">Catalogue change: @_preview.AddedIntegrationIds.Count new networks, @_preview.RemovedIntegrationIds.Count replaced/removed networks. Existing networks with unchanged membership keep their IDs. Preview uses the current catalogue; saving recalculates against the latest definitions.</p>
-                @foreach (var network in related) { <h3>@network.Name</h3><ul>@foreach (var c in network.Connections) { <li>@c.ProducerId → @c.ConsumerId · @InteractionLabels.Describe(c)</li> }</ul> }
+                <div class="preview-summary"><span><strong>@related.Length</strong> connected integrations</span><span><strong>@related.Sum(i => i.Connections.Count)</strong> connections across these integrations</span></div>
+                <details class="quiet-details"><summary>How the catalogue will change</summary><p class="muted">Catalogue change: @_preview.AddedIntegrationIds.Count new networks, @_preview.RemovedIntegrationIds.Count replaced/removed networks. Existing networks with unchanged membership keep their IDs. Preview uses the current catalogue; saving recalculates against the latest definitions.</p></details>
+                @foreach (var network in related) { <h3 class="mt-6">@network.Name</h3><ul>@foreach (var c in network.Connections) { <li>@c.ProducerId → @c.ConsumerId · @InteractionLabels.Describe(c)</li> }</ul> }
                 <DiscoveryFindings Issues="@_preview.Discovery.Issues.Where(i => i.ComponentId == _preview.Definition.Id || related.Any(n => n.Sources.Any(s => s.Id == i.ComponentId))).ToArray()" />
             }
         }

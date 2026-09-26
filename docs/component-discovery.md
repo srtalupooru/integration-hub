@@ -24,7 +24,7 @@ A discovered network is a weakly connected set of components joined by resolved 
 4. Add another component using **Function example**, validate and save it.
 5. Open **Integrations** with the kind filter set to **All integrations** or **Discovered**. The API and function appear as a discovered integration connected through `vendors.created` on the same topic. You can also open **Discovered integrations** for matching findings.
 6. Add the **Receiver example** and **Caller example**. Refresh Discovered integrations to see the four-component network: system → API → function → receiver API. The two HTTP edges show their methods and paths.
-7. Open its Architecture, Matching evidence, Documentation and Findings tabs. Each edge names both source binding IDs. The source revision table records the definitions used.
+7. Open its Architecture, Connections, Documentation and Findings tabs. Each edge names both source binding IDs. The source revision table records the definitions used.
 8. Edit a component's message version or channel. Preview shows findings and networks whose membership would be added or removed. Save and refresh to see the recomputed result.
 9. Use **Dependencies** to analyse a `component:<id>` and see downstream components and affected discovered networks.
 

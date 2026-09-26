@@ -1,24 +1,29 @@
 @page "/components/{Id}"
 @inherits ApiPage
 <PageTitle>Component · Integration Hub</PageTitle>
+<a class="breadcrumb" href="/components">← Components</a>
 <PageState Loading="Loading" Error="@Error" />
 @if (_detail is not null)
 {
     var d = _detail.Definition;
-    <div class="page-heading"><div><div class="eyebrow">@d.Type · @d.Environment · REVISION @_detail.Revision</div><h1>@d.Name</h1><p>@d.Description</p></div><div class="button-row"><MudButton OnClick="Refresh">Refresh</MudButton>@if (Api.CanEdit && !_detail.IsArchived) { <MudButton Href="@($"/components/{Id}/edit")" Variant="Variant.Filled" Color="Color.Primary">Edit definition</MudButton> }@if (Api.IsAdmin) { <MudButton OnClick="@(() => _confirm = true)" Color="Color.Warning">@(_detail.IsArchived ? "Restore" : "Archive")</MudButton> }</div></div>
+    <div class="page-heading"><div><div class="eyebrow">@ComponentVisuals.Label(d.Type.ToString()) · @d.Environment</div><h1>@d.Name</h1><p>@d.Description</p></div><div class="button-row"><MudButton OnClick="Refresh">Refresh</MudButton>@if (Api.CanEdit && !_detail.IsArchived) { <MudButton Href="@($"/components/{Id}/edit")" Variant="Variant.Filled" Color="Color.Primary">Edit definition</MudButton> }@if (Api.IsAdmin) { <MudButton OnClick="@(() => _confirm = true)" Color="Color.Warning">@(_detail.IsArchived ? "Restore" : "Archive")</MudButton> }</div></div>
     @if (_detail.IsArchived) { <MudAlert Severity="Severity.Info">Archived. This component is excluded from discovery; all revisions are retained.</MudAlert> }
     @if (_confirm) { <section class="panel"><h2>@(_detail.IsArchived ? "Restore this component?" : "Archive this component?")</h2><p>Discovery will be recalculated. Related networks may split, merge or disappear; the historical definitions remain available.</p><div class="button-row"><MudButton OnClick="SetArchive" Disabled="Loading" Color="Color.Warning">Confirm @(_detail.IsArchived ? "restore" : "archive")</MudButton><MudButton OnClick="@(() => _confirm = false)">Cancel</MudButton></div></section> }
-    <section class="panel"><div class="tag-list"><span class="badge">@d.Status</span><span class="badge">@d.Criticality criticality</span><span class="badge">@d.Owner</span><span class="badge">@d.Technology</span></div><ComponentInteractions Definition="d" /></section>
-    <section class="panel mt-6"><h2>Discovered integrations</h2>
+    <div class="detail-summary"><div><small>OWNER</small><strong>@ComponentVisuals.OrUnspecified(d.Owner)</strong></div><div><small>TECHNOLOGY</small><strong>@ComponentVisuals.OrUnspecified(d.Technology)</strong></div><div><small>STATUS</small><strong>@d.Status</strong></div><div><small>CRITICALITY</small><strong>@d.Criticality</strong></div></div>
+    <section class="panel detail-tabs"><MudTabs>
+        <MudTabPanel Text="Interactions"><ComponentInteractions Definition="d" /></MudTabPanel>
+        <MudTabPanel Text="Integrations &amp; findings">
+    <div class="section-heading"><div><h2>Connected integrations</h2><p>Generated from this component’s matching calls and messages.</p></div></div>
         @if (_discovery is not null) { var networks = _discovery.Integrations.Where(i => i.Sources.Any(s => s.Id == Id)).ToArray();
             @if (networks.Length == 0) { <p>No resolved integration yet. Review findings below or add the other components.</p> }
             @foreach (var network in networks) { <div class="link-row"><a href="@($"/discovered/{network.Id}")">@network.Name →</a><span>@network.Connections.Count connections</span></div> }
-            <DiscoveryFindings Issues="@_discovery.Issues.Where(i => i.ComponentId == Id).ToArray()" />
+            <h3 class="mt-6 mb-4">Findings to review</h3><DiscoveryFindings Issues="@_discovery.Issues.Where(i => i.ComponentId == Id).ToArray()" />
         }
-    </section>
-    <section class="panel mt-6"><h2>Source and revision history</h2><div class="button-row"><a href="@($"/api/components/{Id}/definition")" target="_blank">Original source ↗</a><a href="@($"/api/components/{Id}/definition?format=json")" target="_blank">Export JSON ↗</a><a href="@($"/api/components/{Id}/definition?format=yaml")" target="_blank">Export YAML ↗</a></div>
+        </MudTabPanel>
+        <MudTabPanel Text="Source &amp; history"><div class="section-heading"><div><h2>Source and revision history</h2><p>Saved definitions and exports. Current revision: @_detail.Revision.</p></div></div><div class="button-row"><a href="@($"/api/components/{Id}/definition")" target="_blank">Original source ↗</a><a href="@($"/api/components/{Id}/definition?format=json")" target="_blank">Export JSON ↗</a><a href="@($"/api/components/{Id}/definition?format=yaml")" target="_blank">Export YAML ↗</a></div>
         @foreach (var version in _versions) { <details class="component-history"><summary>Revision @version.Revision · @version.Timestamp.ToLocalTime().ToString("g") · @version.ChangedBy · @(version.IsArchived ? "Archived" : "Active") · @version.ChangeSummary</summary><pre class="definition-code">@version.OriginalDefinition</pre></details> }
-    </section>
+        </MudTabPanel>
+    </MudTabs></section>
 }
 @code {
     [Parameter] public string Id { get; set; } = "";

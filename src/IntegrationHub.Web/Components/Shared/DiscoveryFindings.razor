@@ -1,10 +1,17 @@
-@if (Issues.Count == 0) { <p class="muted">No discovery findings.</p> }
+@if (Issues.Count == 0) { <p class="muted">No discovery findings to review.</p> }
 else
 {
-    <div class="table-scroll"><table><thead><tr><th>Component / binding</th><th>Finding</th><th>Next step</th></tr></thead><tbody>
-        @foreach (var issue in Issues.Skip(_page * 30).Take(30))
-        { <tr><td><a href="@($"/components/{issue.ComponentId}")">@issue.ComponentId</a><small>@issue.BindingId</small></td><td><span class="badge">@issue.Code</span><p>@issue.Message</p></td><td>@issue.Resolution</td></tr> }
-    </tbody></table></div>
+    <div class="finding-list">
+    @foreach (var issue in Issues.Skip(_page * 30).Take(30))
+    {
+        <article class="finding-card">
+            <div class="binding-heading"><h3>@issue.Code.Replace('_', ' ').ToLowerInvariant()</h3><a href="@($"/components/{issue.ComponentId}")">@issue.ComponentId →</a></div>
+            <p>@issue.Message</p>
+            <div class="finding-next"><strong>Suggested next step</strong>@issue.Resolution</div>
+            <details class="quiet-details"><summary>Technical reference</summary><dl class="technical-grid"><dt>Finding code</dt><dd><code>@issue.Code</code></dd><dt>Declaration</dt><dd>@(issue.BindingId ?? "Component level")</dd></dl></details>
+        </article>
+    }
+    </div>
     @if (Issues.Count > 30) { <div class="pagination"><MudButton Disabled="@(_page == 0)" OnClick="@(() => _page--)">Previous</MudButton><span>Findings @(_page * 30 + 1)–@Math.Min((_page + 1) * 30, Issues.Count) of @Issues.Count</span><MudButton Disabled="@((_page + 1) * 30 >= Issues.Count)" OnClick="@(() => _page++)">Next</MudButton></div> }
 }
 @code {

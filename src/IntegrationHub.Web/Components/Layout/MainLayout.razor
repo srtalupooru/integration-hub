@@ -5,6 +5,7 @@
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
+<a class="skip-link" href="#workspace-main">Skip to content</a>
 <div class="app-shell">
     <aside class="sidebar">
         <a class="brand" href="/"><span class="brand-symbol">⌘</span><span>Integration<span class="brand-light">Hub</span></span></a>
@@ -13,7 +14,6 @@
             <NavLink href="/" Match="NavLinkMatch.All"><MudIcon Icon="@Icons.Material.Outlined.SpaceDashboard" />Dashboard</NavLink>
             <NavLink href="/integrations"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" />Integrations</NavLink>
             <NavLink href="/components"><MudIcon Icon="@Icons.Material.Outlined.Widgets" />Components</NavLink>
-            <NavLink href="/discovered"><MudIcon Icon="@Icons.Material.Outlined.AutoGraph" />Discovered integrations</NavLink>
             <NavLink href="/systems"><MudIcon Icon="@Icons.Material.Outlined.Dns" />Systems</NavLink>
             <NavLink href="/messages"><MudIcon Icon="@Icons.Material.Outlined.Forum" />Messages &amp; events</NavLink>
             <NavLink href="/dependencies"><MudIcon Icon="@Icons.Material.Outlined.Hub" />Dependencies</NavLink>
@@ -26,11 +26,11 @@
     </aside>
     <div class="main-shell">
         <header class="topbar"><span class="topbar-title">Enterprise architecture <span>/</span> Integration Hub</span><div class="topbar-right"><a href="/search" class="top-search"><MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" /> Search catalogue</a><span class="environment"><i></i>@(Api.Session?.Environment ?? "Workspace")</span><span class="user-avatar" title="@(Api.Session?.Name ?? "User")">@(Api.Session?.Name.FirstOrDefault().ToString() ?? "U")</span></div></header>
-        <main class="page-content"><ErrorBoundary><ChildContent>@Body</ChildContent><ErrorContent><MudAlert Severity="Severity.Error">This view could not load. <a href="">Reload</a> to try again.</MudAlert></ErrorContent></ErrorBoundary></main>
+        <main id="workspace-main" class="page-content" tabindex="-1"><ErrorBoundary><ChildContent>@Body</ChildContent><ErrorContent><MudAlert Severity="Severity.Error">This view could not load. <a href="">Reload</a> to try again.</MudAlert></ErrorContent></ErrorBoundary></main>
         <footer class="page-footer">Integration Hub <span>Architecture from definitions · Runtime v1</span></footer>
     </div>
 </div>
 @code {
-    private readonly MudTheme _theme = new() { PaletteLight = new PaletteLight { Primary = "#136f63", Secondary = "#264c72", Background = "#f7f8fa", Surface = "#ffffff", TextPrimary = "#182c3b", TextSecondary = "#6b7b89" }, Typography = new Typography { Default = new DefaultTypography { FontFamily = ["Inter", "Segoe UI", "Arial", "sans-serif"] } }, LayoutProperties = new LayoutProperties { DefaultBorderRadius = "8px" } };
+    private readonly MudTheme _theme = new() { PaletteLight = new PaletteLight { Primary = "#136f63", Secondary = "#264c72", Background = "#f7f8fa", Surface = "#ffffff", TextPrimary = "#182c3b", TextSecondary = "#5c6e7c" }, Typography = new Typography { Default = new DefaultTypography { FontFamily = ["Inter", "Segoe UI", "Arial", "sans-serif"] } }, LayoutProperties = new LayoutProperties { DefaultBorderRadius = "10px" } };
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (firstRender) { try { await Api.InitialiseAsync(); StateHasChanged(); } catch (HubApiException) { } } }
 }

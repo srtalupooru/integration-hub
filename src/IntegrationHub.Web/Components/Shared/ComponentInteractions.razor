@@ -1,25 +1,49 @@
 @if (Definition.Endpoints.Count > 0)
 {
-    <h2>Exposed HTTP endpoints</h2>
-    <div class="table-scroll"><table><thead><tr><th>Endpoint</th><th>Method / path</th><th>Version</th><th>Description</th></tr></thead><tbody>
-    @foreach (var e in Definition.Endpoints) { <tr><td>@e.Id</td><td><strong>@e.Method</strong> @e.Path</td><td>@e.Version</td><td>@e.Description</td></tr> }
-    </tbody></table></div>
+    <section class="interaction-section">
+        <div class="section-heading"><div><h2>Exposed HTTP endpoints</h2><p>Other systems call these operations on this component.</p></div><span class="count-pill">@Definition.Endpoints.Count</span></div>
+        <div class="route-list">
+        @foreach (var e in Definition.Endpoints)
+        {
+            <article class="route-card"><div class="route-line"><div><span class="http-method @e.Method.ToString().ToLowerInvariant()">@e.Method</span><code>@e.Path</code></div><span class="badge">v@e.Version</span></div><small>@e.Id</small>@if (!string.IsNullOrWhiteSpace(e.Description)) { <p>@e.Description</p> }</article>
+        }
+        </div>
+    </section>
 }
 @if (Definition.Calls.Count > 0)
 {
-    <h2>Outbound HTTP calls</h2>
-    <div class="table-scroll"><table><thead><tr><th>Call</th><th>Target API / endpoint</th><th>Method / version</th><th>Description</th></tr></thead><tbody>
-    @foreach (var c in Definition.Calls) { <tr><td>@c.Id</td><td><a href="@($"/components/{c.TargetComponent}")">@c.TargetComponent</a><small>@c.Endpoint</small></td><td>@c.Method · v@c.Version</td><td>@c.Description</td></tr> }
-    </tbody></table></div>
+    <section class="interaction-section">
+        <div class="section-heading"><div><h2>Outbound HTTP calls</h2><p>API operations that this component calls.</p></div><span class="count-pill">@Definition.Calls.Count</span></div>
+        <div class="route-list">
+        @foreach (var c in Definition.Calls)
+        {
+            <article class="route-card"><div class="route-line"><div><span class="http-method @c.Method.ToString().ToLowerInvariant()">@c.Method</span><a href="@($"/components/{c.TargetComponent}")">@c.TargetComponent →</a></div><span class="badge">v@c.Version</span></div><small>Endpoint: @c.Endpoint · Declaration: @c.Id</small>@if (!string.IsNullOrWhiteSpace(c.Description)) { <p>@c.Description</p> }</article>
+        }
+        </div>
+    </section>
 }
-@if (Commands.Length > 0) { <h2>Commands sent</h2><BindingTable Bindings="Commands" /> }
-@if (Publications.Length > 0) { <h2>Events / messages published</h2><BindingTable Bindings="Publications" /> }
-@if (Consumptions.Length > 0) { <h2>Commands / events consumed</h2><BindingTable Bindings="Consumptions" /> }
+@if (Commands.Length > 0)
+{
+    <section class="interaction-section"><div class="section-heading"><div><h2>Commands sent</h2><p>Requests for another component to perform an action.</p></div><span class="count-pill">@Commands.Length</span></div><BindingTable Bindings="Commands" /></section>
+}
+@if (Publications.Length > 0)
+{
+    <section class="interaction-section"><div class="section-heading"><div><h2>Events / messages published</h2><p>Messages made available to matching consumers.</p></div><span class="count-pill">@Publications.Length</span></div><BindingTable Bindings="Publications" /></section>
+}
+@if (Consumptions.Length > 0)
+{
+    <section class="interaction-section"><div class="section-heading"><div><h2>Commands / events consumed</h2><p>Broker messages this component listens for.</p></div><span class="count-pill">@Consumptions.Length</span></div><BindingTable Bindings="Consumptions" /></section>
+}
 @if (Definition.Consumes.Concat(Definition.Publishes).Any(b => b.Channel.Kind == ChannelKind.Http))
 {
-    <h2>Legacy HTTP declarations</h2><p class="muted">These are HTTP requests, not broker messages. Existing links remain supported. Edit the definition to use endpoints and calls with an explicit method.</p>
+    <section class="interaction-section"><h2>Legacy HTTP declarations</h2><p class="muted">Existing links remain supported. Use endpoints and calls when updating this definition.</p>
     @foreach (var b in Definition.Consumes.Where(b => b.Channel.Kind == ChannelKind.Http)) { <p>Accepts HTTP request: @b.Id · @b.Channel.Namespace@b.Channel.Name · @b.Contract v@b.Version</p> }
     @foreach (var b in Definition.Publishes.Where(b => b.Channel.Kind == ChannelKind.Http)) { <p>Calls HTTP service: @b.Id · @b.Channel.Namespace@b.Channel.Name · @b.Contract v@b.Version</p> }
+    </section>
+}
+@if (Definition.Endpoints.Count + Definition.Calls.Count + Definition.Sends.Count + Definition.Publishes.Count + Definition.Consumes.Count == 0)
+{
+    <div class="empty-state"><h2>No interactions declared yet</h2><p>Edit this component to add its API endpoints, calls, or messages.</p></div>
 }
 @code {
     [Parameter, EditorRequired] public ComponentDefinition Definition { get; set; } = new();

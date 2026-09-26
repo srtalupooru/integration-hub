@@ -101,6 +101,7 @@ public sealed class ApiTests
         (await viewer.DeleteAsync("/api/systems/erp")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
     [TestCase("/_content/IntegrationHub.Web/hub.css", "text/css")]
+    [TestCase("/_content/IntegrationHub.Web/workspace.css", "text/css")]
     [TestCase("/_content/IntegrationHub.Web/hub.js", "text/javascript")]
     [TestCase("/_content/IntegrationHub.Web/diagram-viewer.mjs", "text/javascript")]
     [TestCase("/_content/IntegrationHub.Web/diagram-nodes.mjs", "text/javascript")]

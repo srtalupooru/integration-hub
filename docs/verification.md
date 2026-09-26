@@ -18,7 +18,28 @@ The solution compiles with nullable references and warnings treated as errors. A
 
 Coverage includes nonlinear graph construction, cycles and long traversal, shared identities, message consumers, escaping, JSON/YAML parsing and schema equivalence, round-trip exports, SQL-based search, relational mapping, transactional rollback, immutable revisions, conflicts, archival, complete API workflows, CSRF, role authorization, production authentication safeguards and readiness checks. Static CSS, JavaScript and the local Mermaid ESM entry point are verified through HTTP with their executable MIME types.
 
-## Combined integrations catalogue
+## Workspace readability update
+
+The shared workspace stylesheet increases body and metadata text sizes, strengthens
+contrast, and standardizes spacing, surfaces and responsive layouts. Components
+default to cards with an optional table view. Their details separate interactions,
+connected integrations/findings, and source history into tabs. HTTP routes and
+message declarations show their purpose first, with routing/payload details in
+expandable sections. Findings display a suggested next step above their technical
+reference. The editor includes write/review/save steps and YAML formatting help.
+
+The dashboard totals and recent rows include discovered integrations; authored-only
+breakdowns are labelled separately. The separate discovery navigation item remains
+hidden. All 54 API/rendering tests pass, including a populated-dashboard regression
+test, existing escaping/link checks, and HTTP delivery of the new stylesheet.
+`git diff --check` passes. No database or discovery matching behavior was changed.
+
+The in-app browser connection failed before execution (`missing field sandboxPolicy`).
+Live visual validation is outstanding: check the dashboard, catalogue cards/table,
+component tabs, editor and expanded technical details at desktop and mobile widths;
+also verify sidebar scrolling at short heights and keyboard navigation.
+
+## Combined integrations catalogue verification
 
 The Integrations and Search pages now use `/api/catalogue`, which combines authored
 definitions and current discovered networks. All 51 API/rendering tests and all

@@ -17,7 +17,7 @@ Save these four definitions (the order below keeps missing HTTP targets to a min
 | 3 | [vendor-function.yaml](vendor-function.yaml) | Function example | Consumes `vendors.created` and calls the Elite API |
 | 4 | [vendor-system.yaml](vendor-system.yaml) | Caller example | Calls the Vendor API |
 
-Open **Discovered integrations** after saving all four. With only these samples
+Open **Integrations** after saving all four and select the entry marked **Discovered**. With only these samples
 in the catalogue, expect one network containing four components and three links:
 
 ```text

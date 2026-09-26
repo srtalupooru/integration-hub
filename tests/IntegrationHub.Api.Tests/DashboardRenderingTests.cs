@@ -1,4 +1,6 @@
 using IntegrationHub.Web;
+using IntegrationHub.Contracts;
+using System.Text.Json;
 using IntegrationHub.Web.Components.Pages;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -12,6 +14,40 @@ namespace IntegrationHub.Api.Tests;
 [TestFixture]
 public sealed class DashboardRenderingTests
 {
+    [Test]
+    public async Task Dashboard_includes_discovered_integrations_in_totals_and_recent_links()
+    {
+        var authored = new IntegrationSummary("authored", "Authored flow", "", "1.0", "Draft", "Finance", "Team", "Medium", "development", [], 1, DateTimeOffset.UtcNow, 0);
+        var responses = new Dictionary<string, object>
+        {
+            ["/api/dashboard"] = new DashboardSummary(1, 0, 0, 0, 0, 0, [authored], [], [], []),
+            ["/api/component-dashboard"] = new ComponentDashboard(4, 2, 0, 0),
+            ["/api/catalogue?pageSize=5"] = new PagedResult<CatalogueEntry>([
+                new(authored, "Authored"), new(authored with { Id = "auto-flow", Name = "Discovered flow" }, "Discovered")], 3, 1, 5)
+        };
+        var js = new Mock<IJSRuntime>();
+        js.Setup(j => j.InvokeAsync<HubApiClient.ApiResponse>("hub.request", It.IsAny<object?[]?>()))
+            .ReturnsAsync((string _, object?[]? args) => new HubApiClient.ApiResponse(200,
+                JsonSerializer.Serialize(responses[(string)args![1]!], HubJson.Options)));
+        var services = new ServiceCollection().AddLogging();
+        services.AddMudServices();
+        services.AddSingleton(js.Object);
+        services.AddSingleton<NavigationManager, TestNavigationManager>();
+        services.AddScoped<HubApiClient>();
+        await using var provider = services.BuildServiceProvider();
+        await using var scope = provider.CreateAsyncScope();
+        await using var renderer = new HtmlRenderer(scope.ServiceProvider, provider.GetRequiredService<ILoggerFactory>());
+        var html = await renderer.Dispatcher.InvokeAsync(async () => (await renderer.RenderComponentAsync<LoadedDashboard>()).ToHtmlString());
+        html.Should().Contain("All integrations").And.Contain("<strong>3</strong>")
+            .And.Contain("Discovered flow").And.Contain("href=\"/discovered/auto-flow\"")
+            .And.Contain("Authored flow").And.Contain("href=\"/integrations/authored\"");
+    }
+
+    public sealed class LoadedDashboard : Dashboard
+    {
+        protected override async Task OnInitializedAsync() { await LoadAsync(); Loading = false; }
+    }
+
     [TestCase(null)]
     [TestCase("The catalogue database is unavailable.")]
     public async Task Dashboard_only_renders_an_alert_for_an_actual_failure(string? failure)

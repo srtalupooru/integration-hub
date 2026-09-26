@@ -1,20 +1,60 @@
 @page "/components"
 @inherits ApiPage
 <PageTitle>Components · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">AUTHOR ONE COMPONENT AT A TIME</div><h1>Components</h1><p>Describe API endpoints and calls, commands sent, events published, and messages consumed. Matching declarations connect components automatically.</p></div><MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary">Add component</MudButton></div>
-<div class="panel search-row"><MudTextField @bind-Value="_query" Label="Search components, environment or owner" Immediate="true" Variant="Variant.Outlined" /><MudCheckBox T="bool" @bind-Value="_archived" Label="Show archived" /><MudButton OnClick="Refresh">Refresh</MudButton><MudButton Href="/discovered" Color="Color.Primary">Discovered integrations →</MudButton></div>
+<div class="page-heading">
+    <div><div class="eyebrow">THE BUILDING BLOCKS</div><h1>Components</h1><p>Your APIs, functions, and systems. Describe what each one does; matching calls and messages connect them into integrations.</p></div>
+    <MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add">Add component</MudButton>
+</div>
+<div class="panel catalogue-toolbar"><div class="search-row">
+    <MudTextField @bind-Value="_query" Label="Find a component" Placeholder="Name, type, environment or owner" Immediate="true" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" />
+    <MudCheckBox T="bool" @bind-Value="_archived" Label="Include archived" />
+    <MudButton OnClick="Refresh">Refresh</MudButton>
+    <MudIconButton Icon="@(_table ? Icons.Material.Outlined.GridView : Icons.Material.Outlined.TableRows)" OnClick="@(() => _table = !_table)" title="Toggle card or table view" aria-label="Toggle card or table view" />
+</div></div>
 <PageState Loading="Loading" Error="@Error" />
 @if (_items is not null)
 {
     var filtered = _items.Where(c => (_archived || !c.IsArchived) && $"{c.Id} {c.Name} {c.Environment} {c.Owner} {c.Type}".Contains(_query, StringComparison.OrdinalIgnoreCase)).ToArray();
-    <p class="muted">@filtered.Length components</p>
-    @if (filtered.Length == 0) { <div class="panel empty-state"><h2>No components found</h2><p>Add a vendor API definition first, then a function that consumes its published message.</p><MudButton Href="/components/new" Color="Color.Primary">Add a component →</MudButton></div> }
-    else { <div class="panel table-scroll"><table><thead><tr><th>Component</th><th>Type</th><th>Environment</th><th>HTTP endpoints / calls</th><th>Messages</th><th>Status</th><th>Revision</th></tr></thead><tbody>@foreach (var c in filtered) { <tr><td><a href="@($"/components/{c.Id}")">@c.Name</a><small>@c.Id · @c.Owner</small></td><td>@c.Type</td><td>@c.Environment</td><td>@c.Endpoints / @c.Calls</td><td>@c.Consumes consumed · @c.Sends commands sent · @c.Publishes published</td><td><span class="badge">@(c.IsArchived ? "Archived" : c.Status)</span></td><td>@c.Revision</td></tr> }</tbody></table></div> }
+    <div class="results-heading"><span><strong>@filtered.Length</strong> components</span><a href="/integrations">View their integrations →</a></div>
+    @if (filtered.Length == 0)
+    {
+        <div class="panel empty-state"><MudIcon Icon="@Icons.Material.Outlined.Widgets" Size="Size.Large" /><h2>No components found</h2><p>Try a different search, or start with an API and add a function that consumes its events.</p><MudButton Href="/components/new" Color="Color.Primary">Add a component →</MudButton></div>
+    }
+    else if (_table)
+    {
+        <div class="panel table-scroll"><table><thead><tr><th>Component</th><th>Type</th><th>HTTP</th><th>Messages</th><th>Status</th></tr></thead><tbody>
+        @foreach (var c in filtered)
+        {
+            <tr><td><a href="@($"/components/{c.Id}")">@c.Name</a><small>@c.Environment · @ComponentVisuals.OrUnspecified(c.Owner)</small></td><td>@ComponentVisuals.Label(c.Type)</td><td>@c.Endpoints endpoints<small>@c.Calls outbound calls</small></td><td>@c.Consumes consumed<small>@c.Sends commands sent · @c.Publishes published</small></td><td><span class="badge">@(c.IsArchived ? "Archived" : c.Status)</span></td></tr>
+        }
+        </tbody></table></div>
+    }
+    else
+    {
+        <div class="catalogue-grid">
+        @foreach (var c in filtered)
+        {
+            <a class="integration-card component-card" href="@($"/components/{c.Id}")" @key="c.Id">
+                <div class="card-top"><div class="component-identity"><span class="type-icon @ComponentVisuals.Category(c.Type)"><MudIcon Icon="@ComponentVisuals.Icon(c.Type)" /></span><div><h2>@c.Name</h2><small>@ComponentVisuals.Label(c.Type) · @c.Environment</small></div></div><span class="badge @(c.IsArchived ? "archived" : c.Status.ToLowerInvariant())">@(c.IsArchived ? "Archived" : c.Status)</span></div>
+                <div class="component-summary">
+                    @if (c.Endpoints > 0) { <span>@c.Endpoints HTTP endpoints</span> }
+                    @if (c.Calls > 0) { <span>@c.Calls outbound calls</span> }
+                    @if (c.Consumes > 0) { <span>@c.Consumes messages consumed</span> }
+                    @if (c.Sends > 0) { <span>@c.Sends commands sent</span> }
+                    @if (c.Publishes > 0) { <span>@c.Publishes events / messages published</span> }
+                    @if (c.Endpoints + c.Calls + c.Consumes + c.Sends + c.Publishes == 0) { <span>No interactions declared yet</span> }
+                </div>
+                <div class="card-bottom"><span>@ComponentVisuals.OrUnspecified(c.Owner)</span><span>View component →</span></div>
+            </a>
+        }
+        </div>
+    }
 }
 @code {
     private ComponentSummary[]? _items;
     private string _query = "";
     private bool _archived;
+    private bool _table;
     protected override async Task LoadAsync() => _items = await Api.GetAsync<ComponentSummary[]>("/api/components?includeArchived=true");
     private Task Refresh() => ExecuteAsync(LoadAsync);
 }

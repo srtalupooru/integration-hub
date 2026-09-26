@@ -1,8 +1,27 @@
 @if (Bindings.Count == 0) { <p class="muted">No messages declared in this direction.</p> }
 else
 {
-    <div class="table-scroll"><table><thead><tr><th>Binding / contract</th><th>Version / type</th><th>Channel</th><th>Routing</th><th>Payload</th></tr></thead><tbody>
-    @foreach (var b in Bindings) { <tr><td><strong>@b.Contract</strong><small>@b.Id</small><p>@b.Description</p></td><td>@b.Version<small>@b.MessageType</small></td><td>@b.Channel.Kind<small>@b.Channel.Namespace / @b.Channel.Name</small></td><td>@if (b.Subscription is not null) { <p>Subscription/group: @b.Subscription</p> } @if (b.SourceComponent is not null) { <p>From: @b.SourceComponent</p> } @if (b.TargetComponent is not null) { <p>To: @b.TargetComponent</p> }</td><td>@b.ContentType<small>@(b.SchemaFingerprint is null ? "Schema fingerprint not supplied" : "SHA-256: " + b.SchemaFingerprint)</small></td></tr> }
-    </tbody></table></div>
+    <div class="binding-list">
+    @foreach (var b in Bindings)
+    {
+        <article class="binding-card">
+            <div class="binding-heading"><h3>@b.Contract</h3><div class="tag-list"><span class="badge">@b.MessageType</span><span class="badge">v@b.Version</span></div></div>
+            @if (!string.IsNullOrWhiteSpace(b.Description)) { <p>@b.Description</p> }
+            <div class="binding-facts"><div><small>@b.Channel.Kind</small><strong>@b.Channel.Name</strong></div>
+                @if (b.Subscription is not null) { <div><small>Subscription / consumer group</small><strong>@b.Subscription</strong></div> }
+            </div>
+            <details class="quiet-details"><summary>Routing &amp; payload details</summary>
+                <dl class="technical-grid">
+                    <dt>Declaration ID</dt><dd><code>@b.Id</code></dd>
+                    <dt>Namespace</dt><dd>@b.Channel.Namespace</dd>
+                    <dt>Content type</dt><dd>@b.ContentType</dd>
+                    @if (b.SourceComponent is not null) { <dt>Only from</dt><dd><a href="@($"/components/{b.SourceComponent}")">@b.SourceComponent</a></dd> }
+                    @if (b.TargetComponent is not null) { <dt>Only to</dt><dd><a href="@($"/components/{b.TargetComponent}")">@b.TargetComponent</a></dd> }
+                    <dt>Schema fingerprint</dt><dd>@(b.SchemaFingerprint ?? "Not supplied — payload compatibility has not been verified.")</dd>
+                </dl>
+            </details>
+        </article>
+    }
+    </div>
 }
 @code { [Parameter] public IReadOnlyList<MessageBinding> Bindings { get; set; } = []; }
