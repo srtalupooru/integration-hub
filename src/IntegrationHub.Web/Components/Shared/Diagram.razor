@@ -4,10 +4,10 @@
 <section class="graph-viewer" @ref="_element" aria-label="Integration graph">
     <div class="graph-toolbar" role="group" aria-label="Graph controls">
         <div class="graph-toolbar-group">
-            <button type="button" data-graph-action="zoom-out" aria-label="Zoom out" title="Zoom out">−</button>
+            <button type="button" data-graph-action="zoom-out" aria-label="Zoom out" title="Zoom out"><MudIcon Icon="@HubIcons.Minus" /></button>
             <output data-graph-zoom aria-label="Zoom level">100%</output>
-            <button type="button" data-graph-action="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
-            <button type="button" data-graph-action="fit" title="Fit the whole graph in view">Fit</button>
+            <button type="button" data-graph-action="zoom-in" aria-label="Zoom in" title="Zoom in"><MudIcon Icon="@HubIcons.Add" /></button>
+            <button type="button" data-graph-action="fit" title="Fit the whole graph in view"><MudIcon Icon="@HubIcons.Fit" />Fit</button>
             <button type="button" data-graph-action="actual" title="Show at original size">100%</button>
         </div>
         <div class="graph-toolbar-group">
@@ -16,8 +16,8 @@
                 <option value="LR">Horizontal</option>
                 <option value="TB">Vertical</option>
             </select>
-            <button type="button" data-graph-action="fullscreen">Fullscreen</button>
-            <button type="button" data-graph-action="download">Download SVG</button>
+            <button type="button" data-graph-action="fullscreen"><MudIcon Icon="@HubIcons.Fullscreen" /><span data-graph-fullscreen-label>Fullscreen</span></button>
+            <button type="button" data-graph-action="download"><MudIcon Icon="@HubIcons.Download" />Download SVG</button>
         </div>
     </div>
     <div class="graph-viewport" data-graph-viewport tabindex="0" role="region" aria-label="Graph canvas" aria-describedby="@(_id + "-help")" aria-busy="true">

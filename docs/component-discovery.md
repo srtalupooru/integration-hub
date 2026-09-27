@@ -16,6 +16,24 @@ You do not write a combined integration definition or manually list other compon
 
 A discovered network is a weakly connected set of components joined by resolved HTTP calls and message routes. It is a potential communication/dependency network, not an execution trace or proof that every input causes every output. A multi-purpose API can connect multiple business processes into one network. Authors who require distinct handler-level boundaries should document those handlers as separate component IDs. The application does not guess payload transformations or workflow causality.
 
+## Where systems appear
+
+The **Systems** page includes saved components with type `InternalSystem`,
+`ExternalSystem`, or `SaaS`, even before they have any matching connections. These
+entries open the original component details, where calls, messages and discovered
+integrations are maintained. APIs, functions and other technical component types
+remain in **Components**. Archived components are hidden; retired systems remain
+visible with their status, although they do not participate in discovery.
+
+The same page also shows the administrator-managed **Registered systems** used by
+`systemId` references in authored integration definitions. Registry entries and
+component definitions remain separate, including when their IDs or names match.
+Viewing Systems creates no records and does not change either definition.
+
+To add a calling system, open **Components → Add component → Start from a sample
+definition → Caller example**, adapt its identity and API endpoint reference, then
+validate and save. It will appear in Systems automatically.
+
 ## Try the complete example
 
 1. Stop the application with Ctrl+C and run `dotnet run --project src/IntegrationHub.Api` again. In Development, the additive SQLite migration is applied automatically. Existing integrations remain intact.

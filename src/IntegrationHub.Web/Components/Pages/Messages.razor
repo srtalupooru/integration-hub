@@ -3,7 +3,7 @@
 @inherits ApiPage
 <PageTitle>Messages &amp; events · Integration Hub</PageTitle>
 <div class="catalogue-modes"><strong>Authored integration messages</strong><a href="/component-messages">Component messages →</a></div>
-<div class="page-heading"><div><div class="eyebrow">MESSAGE CONTRACTS</div><h1>@(Name ?? "Messages & events")</h1><p>Understand what is exchanged, who produces it, and who consumes it.</p></div></div>
+<div class="page-heading"><div><div class="eyebrow">MESSAGE CONTRACTS</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Forum" /></span><h1>@(Name ?? "Messages & events")</h1></div><p>Understand what is exchanged, who produces it, and who consumes it.</p></div></div>
 <PageState Loading="Loading" Error="@Error" />
 @if (_selected is not null)
 {
@@ -12,7 +12,7 @@
     { var message = occurrence.Message; <section class="panel message-detail"><div class="panel-heading"><h2>@message.Name <span class="badge">@message.Type</span></h2><a href="@($"/integrations/{occurrence.IntegrationId}")">@occurrence.IntegrationName →</a></div><div class="message-flow"><span>@message.Producer</span><b>→</b><span class="message-contract">@message.Name</span><b>→</b><span>@string.Join(", ", message.Consumers)</span></div><p>@message.Description</p><dl><dt>Version</dt><dd>@message.Version</dd><dt>Content type</dt><dd>@message.ContentType</dd><dt>Topic / queue</dt><dd>@message.TopicOrQueue</dd></dl><h3>Schema</h3><pre>@message.Schema</pre><h3>Example payload</h3><pre>@message.ExamplePayload</pre><p>@message.Documentation</p></section> }
     <MudButton Href="@($"/dependencies?component={Uri.EscapeDataString("message:" + Name)}")" Color="Color.Primary">Analyze message consumers →</MudButton>
 }
-else if (!Loading && _messages.Count == 0) { <div class="panel empty-state"><MudIcon Icon="@Icons.Material.Outlined.Forum" Size="Size.Large" /><h2>No message contracts yet</h2><p>Messages and events appear here when they are documented in an integration definition.</p></div> }
+else if (!Loading && _messages.Count == 0) { <div class="panel empty-state"><MudIcon Icon="@HubIcons.Forum" Size="Size.Large" /><h2>No message contracts yet</h2><p>Messages and events appear here when they are documented in an integration definition.</p></div> }
 else { <div class="panel table-scroll"><table><thead><tr><th>Message / event</th><th>Integrations</th><th>Producers</th><th>Consumers</th></tr></thead><tbody>@foreach (var entry in _messages) { <tr><td><a href="@($"/messages/{Uri.EscapeDataString(entry.Name)}")">@entry.Name</a></td><td>@entry.Occurrences.Count</td><td>@string.Join(", ", entry.Occurrences.Select(o => o.Message.Producer).Distinct())</td><td>@string.Join(", ", entry.Occurrences.SelectMany(o => o.Message.Consumers).Distinct())</td></tr> }</tbody></table></div> }
 @code {
     [Parameter] public string? Name { get; set; }

@@ -181,7 +181,7 @@ function createViewer(root) {
         event.preventDefault();
     });
     on(document, 'fullscreenchange', () => {
-        fullscreen.textContent = document.fullscreenElement === root ? 'Exit fullscreen' : 'Fullscreen';
+        fullscreen.querySelector('[data-graph-fullscreen-label]').textContent = document.fullscreenElement === root ? 'Exit fullscreen' : 'Fullscreen';
         fit();
     });
     const observer = new ResizeObserver(() => {

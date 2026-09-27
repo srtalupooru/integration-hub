@@ -1,7 +1,7 @@
 @page "/component-messages"
 @inherits ApiPage
 <PageTitle>Component messages · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">MESSAGE CONTRACTS</div><h1>Component messages</h1><p>Published events, sent commands and consumed messages, including unresolved declarations. HTTP calls and exposed endpoints are listed on the component pages.</p></div><MudButton Href="/discovered" Color="Color.Primary">View discovered flows →</MudButton></div>
+<div class="page-heading"><div><div class="eyebrow">MESSAGE CONTRACTS</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Forum" /></span><h1>Component messages</h1></div><p>Published events, sent commands and consumed messages, including unresolved declarations. HTTP calls and exposed endpoints are listed on the component pages.</p></div><MudButton Href="/discovered" Color="Color.Primary">View discovered flows →</MudButton></div>
 <div class="catalogue-modes"><a href="/messages">Authored integration messages</a><strong>Component messages</strong></div>
 <div class="panel search-row"><MudTextField @bind-Value="_query" Immediate="true" Label="Search contract, component, channel or environment" /><MudButton OnClick="Refresh">Refresh</MudButton></div>
 <PageState Loading="Loading" Error="@Error" />

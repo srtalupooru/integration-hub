@@ -1,4 +1,3 @@
-using MudBlazor;
 namespace IntegrationHub.Web;
 
 public static class ComponentVisuals
@@ -14,18 +13,35 @@ public static class ComponentVisuals
     public static string Category(string type) => type switch
     {
         "Api" or "ApiManagement" => "api",
-        "AzureFunction" or "LogicApp" or "Transformation" => "compute",
+        "AzureFunction" => "function",
+        "LogicApp" or "Transformation" or "Library" or "NuGetPackage" => "compute",
         "ServiceBusTopic" or "ServiceBusQueue" or "MessageBroker" or "EventGrid" => "messaging",
         "Database" or "Storage" or "Sftp" or "FileShare" => "data",
-        _ => "system"
+        "InternalSystem" or "ExternalSystem" or "SaaS" => "system",
+        _ => "other"
     };
-    public static string Icon(string type) => Category(type) switch
+    public static string Icon(string type) => type switch
     {
-        "api" => Icons.Material.Outlined.Code,
-        "compute" => Icons.Material.Outlined.Bolt,
-        "messaging" => Icons.Material.Outlined.Forum,
-        "data" => Icons.Material.Outlined.Storage,
-        _ => Icons.Material.Outlined.Widgets
+        "Api" => HubIcons.Code,
+        "ApiManagement" => HubIcons.Gateway,
+        "AzureFunction" => HubIcons.Bolt,
+        "LogicApp" => HubIcons.LogicApp,
+        "ServiceBusTopic" => HubIcons.Topic,
+        "ServiceBusQueue" => HubIcons.Queue,
+        "Database" => HubIcons.Database,
+        "Storage" => HubIcons.Storage,
+        "InternalSystem" => HubIcons.InternalSystem,
+        "ExternalSystem" => HubIcons.ExternalSystem,
+        "SaaS" => HubIcons.CloudQueue,
+        "EventGrid" => HubIcons.Event,
+        "MessageBroker" => HubIcons.Hub,
+        "Transformation" => HubIcons.Transform,
+        "Library" => HubIcons.Library,
+        "NuGetPackage" => HubIcons.Package,
+        "Sftp" => HubIcons.Sftp,
+        "FileShare" => HubIcons.FileShare,
+        "ManualProcess" => HubIcons.Person,
+        _ => HubIcons.Custom
     };
     public static string OrUnspecified(string value) => string.IsNullOrWhiteSpace(value) ? "Not specified" : value;
 }

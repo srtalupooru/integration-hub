@@ -2,7 +2,7 @@
 @page "/systems/{Id}"
 @inherits ApiPage
 <PageTitle>Systems · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">ENTERPRISE SYSTEM REGISTRY</div><h1>@(_selected?.Name ?? "Systems")</h1><p>Stable identities for the systems your integrations connect.</p></div>@if (Api.IsAdmin) { <MudButton OnClick="@(() => _editing = !_editing)" Variant="Variant.Filled" Color="Color.Primary">@(_selected is null ? "Register system" : "Edit system")</MudButton> }</div>
+<div class="page-heading"><div><div class="eyebrow">SYSTEM CATALOGUE</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Dns" /></span><h1>@(_selected?.Name ?? "Systems")</h1></div><p>Business systems from component definitions and your enterprise registry.</p></div><div class="button-row">@if (Id is null && Api.CanEdit) { <MudButton Href="/components/new" StartIcon="@HubIcons.Add" Variant="Variant.Filled" Color="Color.Primary">Add system component</MudButton> }@if (Api.IsAdmin) { <MudButton OnClick="@(() => _editing = !_editing)" Variant="Variant.Outlined" Color="Color.Primary">@(_selected is null ? "Register system" : "Edit system")</MudButton> }</div></div>
 <PageState Loading="Loading" Error="@Error" />
 @if (_editing && Api.IsAdmin)
 {
@@ -12,12 +12,40 @@
 {
     <section class="panel documentation"><span class="badge">@_selected.Type</span><h2>@_selected.Name</h2><p>@_selected.Description</p><dl><dt>Owner</dt><dd>@_selected.Owner</dd><dt>Business domain</dt><dd>@_selected.BusinessDomain</dd><dt>Criticality</dt><dd>@_selected.Criticality</dd><dt>Vendor</dt><dd>@_selected.Vendor</dd><dt>Support</dt><dd>@_selected.SupportContact</dd></dl>@if (_selected.DocumentationUrl is not null) { <a href="@_selected.DocumentationUrl" target="_blank" rel="noopener noreferrer">Documentation ↗</a> }<div class="button-row"><MudButton Href="@($"/dependencies?component=system:{_selected.Id}")" Color="Color.Primary">Analyze system impact →</MudButton><MudButton Href="/systems">All systems</MudButton></div>@if (Api.IsAdmin) { <details class="danger-zone"><summary>Delete system</summary><MudCheckBox T="bool" @bind-Value="_confirm" Label="Delete this unreferenced system" /><MudButton Disabled="@(!_confirm || Loading)" OnClick="Delete" Color="Color.Error">Delete</MudButton></details> }</section>
 }
-else if (!Loading && _systems.Count == 0) { <div class="panel empty-state"><MudIcon Icon="@Icons.Material.Outlined.Dns" Size="Size.Large" /><h2>No systems registered yet</h2><p>Register a system, then reference its ID in integration nodes to connect the global graph.</p></div> }
-else { <div class="catalogue-grid">@foreach (var system in _systems) { <a href="@($"/systems/{system.Id}")" class="integration-card"><span class="integration-icon"><MudIcon Icon="@Icons.Material.Outlined.Dns" /></span><h2>@system.Name</h2><p>@system.Description</p><div class="card-meta"><span>@system.Type</span><span>@system.BusinessDomain</span></div><div class="card-bottom"><span>@system.Owner</span><span>@system.Criticality</span></div></a> }</div> }
+else if (!Loading && Error is null && Id is null)
+{
+    <div class="notice-strip"><MudIcon Icon="@HubIcons.InternalSystem" /><p>System components use type <code>InternalSystem</code>, <code>ExternalSystem</code>, or <code>SaaS</code> and appear here automatically when saved. APIs, functions, and other technical services are in <a href="/components">Components</a>.</p></div>
+    @if (_systems.Count == 0 && _systemComponents.Count == 0)
+    {
+        <div class="panel empty-state"><MudIcon Icon="@HubIcons.Dns" Size="Size.Large" /><h2>No systems yet</h2><p>Add a system component to describe the business application calling your API. Under Add component, open Start from a sample definition and choose Caller example. Administrators can also register a system for authored integration nodes.</p><MudButton Href="/components" Variant="Variant.Outlined" Color="Color.Primary">Browse components</MudButton></div>
+    }
+    @if (_systemComponents.Count > 0)
+    {
+        <section class="section-stack mb-6" aria-label="System components">
+            <div class="section-heading"><div><h2>System components</h2><p>From saved definitions. Open a system to review its calls, messages, and connected integrations.</p></div><span class="count-pill">@_systemComponents.Count</span></div>
+            <div class="catalogue-grid">@foreach (var system in _systemComponents)
+            {
+                <a href="@($"/components/{Uri.EscapeDataString(system.Id)}")" class="integration-card component-card system">
+                    <div class="card-top"><div class="component-identity"><span class="type-icon system"><MudIcon Icon="@ComponentVisuals.Icon(system.Type)" /></span><div><h2>@system.Name</h2><small>@ComponentVisuals.Label(system.Type)</small></div></div><StatusBadge Status="@system.Status" /></div>
+                    <div class="card-meta"><span>@system.Environment</span><span>@system.Id</span><span>Component definition</span></div>
+                    <div class="card-bottom"><span class="card-owner"><MudIcon Icon="@HubIcons.Person" />@ComponentVisuals.OrUnspecified(system.Owner)</span><span class="card-open" aria-label="View system component"><MudIcon Icon="@HubIcons.ArrowRight" /></span></div>
+                </a>
+            }</div>
+        </section>
+    }
+    @if (_systems.Count > 0)
+    {
+        <section class="section-stack" aria-label="Registered systems">
+            <div class="section-heading"><div><h2>Registered systems</h2><p>Managed by administrators and referenced by system ID in authored integrations. Registry entries and component definitions have separate identities.</p></div><span class="count-pill">@_systems.Count</span></div>
+            <div class="catalogue-grid">@foreach (var system in _systems) { <a href="@($"/systems/{Uri.EscapeDataString(system.Id)}")" class="integration-card"><span class="integration-icon"><MudIcon Icon="@HubIcons.Dns" /></span><h2>@system.Name</h2><p>@system.Description</p><div class="card-meta"><span>@system.Type</span><span>@system.BusinessDomain</span><span>Registry entry</span></div><div class="card-bottom"><span>@system.Owner</span><span>@system.Criticality</span></div></a> }</div>
+        </section>
+    }
+}
 @code {
     [Parameter] public string? Id { get; set; }
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     private IReadOnlyList<SystemDefinition> _systems = [];
+    private IReadOnlyList<ComponentSummary> _systemComponents = [];
     private SystemDefinition? _selected;
     private bool _editing, _confirm;
     private string _id = "", _name = "", _description = "", _type = "", _owner = "", _domain = "", _vendor = "", _support = "", _url = "";
@@ -25,7 +53,14 @@ else { <div class="catalogue-grid">@foreach (var system in _systems) { <a href="
     protected override async Task LoadAsync()
     {
         _selected = null;
-        if (Id is null) { _systems = await Api.GetAsync<IReadOnlyList<SystemDefinition>>("/api/systems"); return; }
+        if (Id is null)
+        {
+            _systems = await Api.GetAsync<IReadOnlyList<SystemDefinition>>("/api/systems");
+            _systemComponents = (await Api.GetAsync<IReadOnlyList<ComponentSummary>>("/api/components"))
+                .Where(c => !c.IsArchived && c.Type is "InternalSystem" or "ExternalSystem" or "SaaS")
+                .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ThenBy(c => c.Id, StringComparer.Ordinal).ToArray();
+            return;
+        }
         _selected = await Api.GetAsync<SystemDefinition>($"/api/systems/{Uri.EscapeDataString(Id)}");
         _id = _selected.Id; _name = _selected.Name; _description = _selected.Description; _type = _selected.Type; _owner = _selected.Owner; _domain = _selected.BusinessDomain; _vendor = _selected.Vendor; _support = _selected.SupportContact; _url = _selected.DocumentationUrl ?? ""; _criticality = _selected.Criticality;
     }

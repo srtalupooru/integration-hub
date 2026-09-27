@@ -1,17 +1,17 @@
 @page "/"
 @inherits ApiPage
 <PageTitle>Dashboard · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">YOUR WORKSPACE</div><h1>Workspace overview</h1><p>Understand what you have, how it connects, and what needs a closer look.</p></div><MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add">Add component</MudButton></div>
+<div class="page-heading"><div><div class="eyebrow">YOUR WORKSPACE</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.SpaceDashboard" /></span><h1>Workspace overview</h1></div><p>Understand what you have, how it connects, and what needs a closer look.</p></div><MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@HubIcons.Add">Add component</MudButton></div>
 <PageState Loading="Loading" Error="@Error" />
 @if (_dashboard is not null && _components is not null)
 {
     <div class="metric-grid">
         @foreach (var metric in Metrics())
-        { <div class="metric-card"><span>@metric.Label</span><MudIcon Icon="@metric.Icon" /><strong>@metric.Value</strong><small>@metric.Note</small></div> }
+        { <div class="metric-card"><span>@metric.Label</span><span class="metric-symbol"><MudIcon Icon="@metric.Icon" /></span><strong>@metric.Value</strong><small>@metric.Note</small></div> }
     </div>
     @if (_dashboard.TotalIntegrations == 0 && _components.Networks == 0)
     {
-        <section class="empty-hero"><div class="empty-illustration" aria-hidden="true"><div class="empty-node"><MudIcon Icon="@Icons.Material.Outlined.Code" /></div><span class="connector"></span><div class="empty-node center"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /></div><span class="connector"></span><div class="empty-node"><MudIcon Icon="@Icons.Material.Outlined.Bolt" /></div></div><h2>Build a clear picture of your integrations</h2><p>Add an API or function and describe its calls and messages. Matching components connect automatically.</p><div class="button-row"><MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary">@(_components.Components == 0 ? "Add your first component" : "Add a component")</MudButton><MudButton Href="/import" Variant="Variant.Outlined" Color="Color.Primary">Import an integration</MudButton></div></section>
+        <section class="empty-hero"><div class="empty-illustration" aria-hidden="true"><div class="empty-node"><MudIcon Icon="@HubIcons.Code" /></div><span class="connector"></span><div class="empty-node center"><MudIcon Icon="@HubIcons.AccountTree" /></div><span class="connector"></span><div class="empty-node"><MudIcon Icon="@HubIcons.Bolt" /></div></div><h2>Build a clear picture of your integrations</h2><p>Add an API or function and describe its calls and messages. Matching components connect automatically.</p><div class="button-row"><MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary">@(_components.Components == 0 ? "Add your first component" : "Add a component")</MudButton><MudButton Href="/import" Variant="Variant.Outlined" Color="Color.Primary">Import an integration</MudButton></div></section>
     }
     <div class="dashboard-grid mt-6">
         <section class="panel">
@@ -21,15 +21,15 @@
                 @foreach (var entry in _recent.Items)
                 {
                     var item = entry.Summary;
-                    <a class="integration-row" href="@entry.DetailUrl"><span class="integration-icon"><MudIcon Icon="@(entry.Origin == "Discovered" ? Icons.Material.Outlined.AutoGraph : Icons.Material.Outlined.AccountTree)" /></span><span><strong>@item.Name</strong><small>@entry.Origin · @ComponentVisuals.OrUnspecified(item.BusinessDomain)</small></span><time>@item.UpdatedAt.ToLocalTime().ToString("dd MMM")</time></a>
+                    <a class="integration-row" href="@entry.DetailUrl"><span class="integration-icon"><MudIcon Icon="@(entry.Origin == "Discovered" ? HubIcons.AutoGraph : HubIcons.AccountTree)" /></span><span><strong>@item.Name</strong><small>@entry.Origin · @ComponentVisuals.OrUnspecified(item.BusinessDomain)</small></span><time>@item.UpdatedAt.ToLocalTime().ToString("dd MMM")</time></a>
                 }
             }
             else { <p>Your integrations will appear here once you import a definition or connect components.</p> }
         </section>
         <section class="panel"><div class="panel-heading"><h2>Where would you like to start?</h2></div><div class="quick-actions">
-            <a class="quick-action" href="/components"><MudIcon Icon="@Icons.Material.Outlined.Widgets" /><span><strong>Explore components</strong><small>APIs, functions, and the messages they exchange.</small></span></a>
-            <a class="quick-action" href="/integrations"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /><span><strong>See connected integrations</strong><small>Follow a flow from source to destination.</small></span></a>
-            <a class="quick-action" href="/discovered"><MudIcon Icon="@Icons.Material.Outlined.Rule" /><span><strong>Review connection findings</strong><small>Understand why components match or remain unlinked.</small></span></a>
+            <a class="quick-action" href="/components"><MudIcon Icon="@HubIcons.Widgets" /><span><strong>Explore components</strong><small>APIs, functions, and the messages they exchange.</small></span></a>
+            <a class="quick-action" href="/integrations"><MudIcon Icon="@HubIcons.AccountTree" /><span><strong>See connected integrations</strong><small>Follow a flow from source to destination.</small></span></a>
+            <a class="quick-action" href="/discovered"><MudIcon Icon="@HubIcons.Rule" /><span><strong>Review connection findings</strong><small>Understand why components match or remain unlinked.</small></span></a>
         </div></section>
     </div>
     @if (_dashboard.TotalIntegrations > 0)
@@ -49,9 +49,9 @@
     }
     private IEnumerable<(string Label, int Value, string Note, string Icon)> Metrics()
     {
-        yield return ("All integrations", _dashboard!.TotalIntegrations + (_components?.Networks ?? 0), "Authored and discovered", Icons.Material.Outlined.AccountTree);
-        yield return ("Components", _components?.Components ?? 0, "APIs, functions and systems", Icons.Material.Outlined.Widgets);
-        yield return ("Not linked yet", _components?.Unlinked ?? 0, "Components awaiting a match", Icons.Material.Outlined.Hub);
-        yield return ("Findings to review", _dashboard.ValidationWarnings + (_components?.Findings ?? 0), "Validation and discovery", Icons.Material.Outlined.Rule);
+        yield return ("All integrations", _dashboard!.TotalIntegrations + (_components?.Networks ?? 0), "Authored and discovered", HubIcons.AccountTree);
+        yield return ("Components", _components?.Components ?? 0, "APIs, functions and systems", HubIcons.Widgets);
+        yield return ("Not linked yet", _components?.Unlinked ?? 0, "Components awaiting a match", HubIcons.Hub);
+        yield return ("Findings to review", _dashboard.ValidationWarnings + (_components?.Findings ?? 0), "Validation and discovery", HubIcons.Rule);
     }
 }

@@ -5,7 +5,7 @@ else
     @foreach (var b in Bindings)
     {
         <article class="binding-card">
-            <div class="binding-heading"><h3>@b.Contract</h3><div class="tag-list"><span class="badge">@b.MessageType</span><span class="badge">v@b.Version</span></div></div>
+            <div class="binding-heading"><h3 class="message-title"><span class="message-symbol"><MudIcon Icon="@(b.MessageType == MessageType.Command ? HubIcons.Send : b.MessageType == MessageType.Event ? HubIcons.Event : HubIcons.File)" /></span>@b.Contract</h3><div class="tag-list"><span class="badge">@b.MessageType</span><span class="badge">v@b.Version</span></div></div>
             @if (!string.IsNullOrWhiteSpace(b.Description)) { <p>@b.Description</p> }
             <div class="binding-facts"><div><small>@b.Channel.Kind</small><strong>@b.Channel.Name</strong></div>
                 @if (b.Subscription is not null) { <div><small>Subscription / consumer group</small><strong>@b.Subscription</strong></div> }

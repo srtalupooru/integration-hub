@@ -4,7 +4,7 @@
 @inject NavigationManager Navigation
 <a class="breadcrumb" href="/components">← Components</a>
 <PageTitle>Component definition · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">COMPONENT DEFINITION</div><h1>@(Id is null ? "Add a component" : "Edit component")</h1><p>Describe one API, function, or system. Check its connections, then save it to your catalogue.</p></div><a href="/api/component-schema" target="_blank">Component schema ↗</a></div>
+<div class="page-heading"><div><div class="eyebrow">COMPONENT DEFINITION</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.File" /></span><h1>@(Id is null ? "Add a component" : "Edit component")</h1></div><p>Describe one API, function, or system. Check its connections, then save it to your catalogue.</p></div><a href="/api/component-schema" target="_blank">Component schema ↗</a></div>
 <PageState Loading="Loading" Error="@Error" />
 @if (!Loading && !Api.CanEdit) { <MudAlert Severity="Severity.Info">An Editor or Admin role is required to save component definitions.</MudAlert> }
 else
@@ -21,11 +21,11 @@ else
   type: Api
   environment: development</pre></details>
         <MudTextField @bind-Value="_summary" Label="Change summary (optional)" Class="mt-4" Variant="Variant.Outlined" />
-        <div class="editor-actions"><MudButton OnClick="Preview" Disabled="@(Loading || string.IsNullOrWhiteSpace(_source))" Variant="Variant.Outlined" Color="Color.Primary">Validate &amp; preview links</MudButton><MudButton OnClick="Save" Disabled="@(Loading || _preview?.Validation.IsValid != true || _validated != _source)" Variant="Variant.Filled" Color="Color.Primary">Save component</MudButton></div>
+        <div class="editor-actions"><MudButton OnClick="Preview" StartIcon="@HubIcons.FactCheck" Disabled="@(Loading || string.IsNullOrWhiteSpace(_source))" Variant="Variant.Outlined" Color="Color.Primary">Validate &amp; preview links</MudButton><MudButton OnClick="Save" StartIcon="@HubIcons.Save" Disabled="@(Loading || _preview?.Validation.IsValid != true || _validated != _source)" Variant="Variant.Filled" Color="Color.Primary">Save component</MudButton></div>
         <p class="muted">@(_revision is null ? "Nothing is stored until you save." : $"Editing revision {_revision}. A stale revision cannot overwrite another author's changes.") Unresolved messages can be saved; add the other components later.</p>
     </section><section class="panel preview-panel">
         <h2>Review your component</h2>
-        @if (_preview is null) { <div class="preview-empty"><MudIcon Icon="@Icons.Material.Outlined.AccountTree" /><h3>See how it connects</h3><p>Choose Validate &amp; preview links to check your definition and find matching components.</p></div> }
+        @if (_preview is null) { <div class="preview-empty"><MudIcon Icon="@HubIcons.AccountTree" /><h3>See how it connects</h3><p>Choose Validate &amp; preview links to check your definition and find matching components.</p></div> }
         else
         {
             <ValidationView Result="_preview.Validation" />

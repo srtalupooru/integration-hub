@@ -18,6 +18,42 @@ The solution compiles with nullable references and warnings treated as errors. A
 
 Coverage includes nonlinear graph construction, cycles and long traversal, shared identities, message consumers, escaping, JSON/YAML parsing and schema equivalence, round-trip exports, SQL-based search, relational mapping, transactional rollback, immutable revisions, conflicts, archival, complete API workflows, CSRF, role authorization, production authentication safeguards and readiness checks. Static CSS, JavaScript and the local Mermaid ESM entry point are verified through HTTP with their executable MIME types.
 
+## Systems catalogue update
+
+The Systems page now reads the component catalogue as well as the existing system
+registry. System components (`InternalSystem`, `ExternalSystem`, `SaaS`) link to
+their component details; registered systems retain their original detail routes.
+Archived components are omitted, while retired entries display their status.
+The empty state explains the system/component distinction and the caller template.
+API errors no longer display a misleading empty-systems message.
+
+All 62 API/rendering tests passed. Six new rendering cases cover empty, registry-only,
+component-only and mixed catalogues, all component types, archived/retired entries,
+identical IDs with distinct routes, API failure and registered detail rendering with
+HTML encoding. This change does not modify API contracts, persistence or discovery.
+Live browser verification remains unavailable due to the connection failure noted below.
+
+## Modern icons and navigation update
+
+The workspace now uses original inline SVG symbols with consistent stroke weights,
+including a distinct icon for every one of the 20 component types. Navigation is
+grouped into Workspace, Explore and Authoring, with a dark teal sidebar and a
+collapsible mobile menu. Component cards, status badges, interaction headings and
+graph controls share the same visual language. Discovered integration details keep
+Integrations selected; the separate discovery navigation item remains hidden.
+
+All 56 API/rendering tests and all 7 JavaScript viewport tests passed. New rendering
+checks exercise every component icon through MudBlazor and verify navigation groups,
+the selected integration route and mobile menu accessibility attributes. The graph
+viewer passes its JavaScript syntax check, and fullscreen updates preserve its icon.
+`git diff --check` passes. No catalogue data or discovery rules were changed.
+
+The in-app browser bootstrap still fails before execution (`missing field sandboxPolicy`).
+Actual visual layout and interaction checks remain outstanding: inspect desktop and
+mobile widths, open/close the mobile menu, check short-height sidebar scrolling,
+and exercise graph fullscreen. These automated checks do not constitute a live
+browser visual pass.
+
 ## Workspace readability update
 
 The shared workspace stylesheet increases body and metadata text sizes, strengthens

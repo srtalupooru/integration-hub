@@ -1,9 +1,9 @@
 @page "/dependencies"
 @inherits ApiPage
 <PageTitle>Dependency analysis · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">UNDERSTAND THE CONNECTIONS</div><h1>Dependencies &amp; impact</h1><p>Trace upstream dependencies, downstream systems, and affected integrations.</p></div></div>
+<div class="page-heading"><div><div class="eyebrow">UNDERSTAND THE CONNECTIONS</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Hub" /></span><h1>Dependencies &amp; impact</h1></div><p>Trace upstream dependencies, downstream systems, and affected integrations.</p></div></div>
 <PageState Loading="Loading" Error="@Error" />
-@if (_graph is not null && _graph.Nodes.Count == 0) { <div class="panel empty-state"><MudIcon Icon="@Icons.Material.Outlined.Hub" Size="Size.Large" /><h2>Your dependency graph starts with a definition</h2><p>Import integrations to explore their relationships and shared components.</p><MudButton Href="/import" Color="Color.Primary">Import definition →</MudButton></div> }
+@if (_graph is not null && _graph.Nodes.Count == 0) { <div class="panel empty-state"><MudIcon Icon="@HubIcons.Hub" Size="Size.Large" /><h2>Your dependency graph starts with a definition</h2><p>Import integrations to explore their relationships and shared components.</p><MudButton Href="/import" Color="Color.Primary">Import definition →</MudButton></div> }
 else if (_graph is not null)
 {
     <div class="panel search-row"><MudSelect T="string" @bind-Value="_component" Label="Select a system, component, message, or integration" Variant="Variant.Outlined">@foreach (var node in _graph.Nodes) { <MudSelectItem Value="@node.Id">@node.Name · @node.Kind · @node.Id</MudSelectItem> }</MudSelect><MudButton OnClick="Analyze" Disabled="@(Loading || string.IsNullOrEmpty(_component))" Color="Color.Primary" Variant="Variant.Filled">Analyze impact</MudButton></div>

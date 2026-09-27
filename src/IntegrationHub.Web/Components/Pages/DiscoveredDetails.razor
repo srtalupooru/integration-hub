@@ -6,9 +6,9 @@
 @if (_view is not null)
 {
     var i = _view.Integration;
-    <div class="page-heading"><div><div class="eyebrow">DISCOVERED · @i.Environment</div><h1>@i.Name</h1><p>@i.Sources.Count components connected through @i.Connections.Count HTTP calls and message routes.</p></div><MudButton OnClick="Refresh">Refresh</MudButton></div>
+    <div class="page-heading"><div><div class="eyebrow">DISCOVERED · @i.Environment</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.AutoGraph" /></span><h1>@i.Name</h1></div><p>@i.Sources.Count components connected through @i.Connections.Count HTTP calls and message routes.</p></div><MudButton OnClick="Refresh" StartIcon="@HubIcons.Refresh">Refresh</MudButton></div>
     <div class="detail-summary"><div><small>ENVIRONMENT</small><strong>@i.Environment</strong></div><div><small>COMPONENTS</small><strong>@i.Sources.Count</strong></div><div><small>CONNECTIONS</small><strong>@i.Connections.Count</strong></div><div><small>FINDINGS TO REVIEW</small><strong>@i.Issues.Count</strong></div></div>
-    <div class="notice-strip"><MudIcon Icon="@Icons.Material.Outlined.AutoGraph" /><p>This integration is generated from your components. Edit a source component to update its connections.</p></div>
+    <div class="notice-strip"><MudIcon Icon="@HubIcons.AutoGraph" /><p>This integration is generated from your components. Edit a source component to update its connections.</p></div>
     <section class="panel detail-tabs"><MudTabs>
         <MudTabPanel Text="Architecture"><Diagram Markup="@_view.Diagram" /></MudTabPanel>
         <MudTabPanel Text="Connections"><div class="table-scroll"><table><thead><tr><th>From</th><th>To</th><th>Interaction</th><th>Channel / delivery</th></tr></thead><tbody>@foreach (var c in i.Connections) { <tr><td><a href="@($"/components/{c.ProducerId}")">@ComponentName(c.ProducerId)</a><small>@c.PublishBindingId</small></td><td><a href="@($"/components/{c.ConsumerId}")">@ComponentName(c.ConsumerId)</a><small>@c.ConsumeBindingId</small></td><td>@InteractionLabels.Describe(c)</td><td>@c.Channel.Kind · @c.Channel.Namespace / @c.Channel.Name<small>@c.Delivery · @c.Subscription</small></td></tr> }</tbody></table></div></MudTabPanel>

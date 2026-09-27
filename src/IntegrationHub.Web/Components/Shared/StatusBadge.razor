@@ -1,0 +1,9 @@
+<span class="badge status-badge @Tone"><span class="status-dot" aria-hidden="true"></span>@Status</span>
+@code {
+    [Parameter] public string Status { get; set; } = "Draft";
+    private string Tone => Status.ToLowerInvariant() switch
+    {
+        "production" => "production", "development" => "development", "test" => "test",
+        "deprecated" => "deprecated", "retired" or "archived" => "archived", _ => "draft"
+    };
+}
