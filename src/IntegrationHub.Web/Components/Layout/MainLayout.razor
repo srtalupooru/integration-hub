@@ -9,42 +9,37 @@
 <div class="app-shell">
     <aside class="sidebar">
         <div class="sidebar-brand-row">
-            <a class="brand" href="/"><span class="brand-symbol"><MudIcon Icon="@HubIcons.AccountTree" /></span><span>Integration<span class="brand-light">Hub</span></span></a>
+            <a class="brand" href="/"><span class="brand-symbol"><MudIcon Icon="@HubIcons.AccountTree" /></span><span>Integration Hub</span></a>
             <button class="navigation-toggle" type="button" @onclick="@(() => _menuOpen = !_menuOpen)" aria-expanded="@(_menuOpen ? "true" : "false")" aria-controls="workspace-navigation"><MudIcon Icon="@HubIcons.TableRows" />Menu</button>
         </div>
         <div id="workspace-navigation" class="sidebar-links @(_menuOpen ? "is-open" : "")" @onclick="@(() => _menuOpen = false)">
             <div class="workspace-label">WORKSPACE</div>
             <nav aria-label="Workspace">
-                <NavLink href="/" Match="NavLinkMatch.All"><span class="nav-icon"><MudIcon Icon="@HubIcons.SpaceDashboard" /></span>Overview</NavLink>
-                <a href="/integrations" class="@(CurrentSection == "Integrations" ? "active" : null)" aria-current="@(CurrentSection == "Integrations" ? "location" : null)"><span class="nav-icon"><MudIcon Icon="@HubIcons.AccountTree" /></span>Integrations</a>
-                <NavLink href="/components"><span class="nav-icon"><MudIcon Icon="@HubIcons.Widgets" /></span>Components</NavLink>
+                <NavLink href="/" Match="NavLinkMatch.All"><span class="nav-icon"><MudIcon Icon="@HubIcons.SpaceDashboard" /></span><span class="nav-copy">Overview</span></NavLink>
+                <NavLink href="/components"><span class="nav-icon"><MudIcon Icon="@HubIcons.Widgets" /></span><span class="nav-copy">Components</span></NavLink>
+                <a href="/integrations" class="@(CurrentSection == "Integrations" ? "active" : null)" aria-current="@(CurrentSection == "Integrations" ? "location" : null)"><span class="nav-icon"><MudIcon Icon="@HubIcons.AccountTree" /></span><span class="nav-copy">Integrations</span></a>
+                <NavLink href="/systems"><span class="nav-icon"><MudIcon Icon="@HubIcons.Dns" /></span><span class="nav-copy">Systems</span></NavLink>
             </nav>
             <div class="workspace-label">EXPLORE</div>
             <nav aria-label="Explore">
-                <NavLink href="/systems"><span class="nav-icon"><MudIcon Icon="@HubIcons.Dns" /></span>Systems</NavLink>
-                <NavLink href="/messages"><span class="nav-icon"><MudIcon Icon="@HubIcons.Forum" /></span>Messages &amp; events</NavLink>
-                <NavLink href="/dependencies"><span class="nav-icon"><MudIcon Icon="@HubIcons.Hub" /></span>Dependencies</NavLink>
-                <NavLink href="/search"><span class="nav-icon"><MudIcon Icon="@HubIcons.Search" /></span>Search</NavLink>
+                <a href="/component-messages" class="@(CurrentSection == "Messages" ? "active" : null)" aria-current="@(CurrentSection == "Messages" ? "location" : null)"><span class="nav-icon"><MudIcon Icon="@HubIcons.Forum" /></span><span class="nav-copy">Messages</span></a>
+                <NavLink href="/dependencies"><span class="nav-icon"><MudIcon Icon="@HubIcons.Hub" /></span><span class="nav-copy">Connections &amp; impact</span></NavLink>
             </nav>
-            <div class="nav-divider"></div>
-            <nav aria-label="Authoring"><NavLink href="/import"><span class="nav-icon"><MudIcon Icon="@HubIcons.UploadFile" /></span>Import definition</NavLink></nav>
         </div>
-        <div class="workspace-footer"><span class="workspace-avatar"><MudIcon Icon="@HubIcons.Code" Size="Size.Small" /></span><span>Definition workspace<small>Connected by design</small></span><a href="/swagger" target="_blank" aria-label="Open API documentation" title="API documentation"><MudIcon Icon="@HubIcons.ArrowOut" Size="Size.Small" /></a></div>
     </aside>
     <div class="main-shell">
         <header class="topbar"><span class="topbar-title">Workspace <span>/</span> <strong>@CurrentSection</strong></span><div class="topbar-right"><a href="/search" class="top-search"><MudIcon Icon="@HubIcons.Search" Size="Size.Small" /> Search catalogue</a><span class="environment"><i></i>@(Api.Session?.Environment ?? "Workspace")</span><span class="user-avatar" title="@(Api.Session?.Name ?? "User")">@(Api.Session?.Name.FirstOrDefault().ToString() ?? "U")</span></div></header>
         <main id="workspace-main" class="page-content" tabindex="-1"><ErrorBoundary><ChildContent>@Body</ChildContent><ErrorContent><MudAlert Severity="Severity.Error">This view could not load. <a href="">Reload</a> to try again.</MudAlert></ErrorContent></ErrorBoundary></main>
-        <footer class="page-footer">Integration Hub <span>Architecture from definitions · Runtime v1</span></footer>
     </div>
 </div>
 @code {
     private bool _menuOpen;
     private string CurrentSection => Navigation.ToBaseRelativePath(Navigation.Uri).Split(new[] { '?', '#' }, 2)[0].Split('/')[0] switch
     {
-        "integrations" or "discovered" => "Integrations", "components" => "Components",
-        "systems" => "Systems", "messages" or "component-messages" => "Messages & events",
-        "dependencies" => "Dependencies", "search" => "Search", "import" => "Import definition", _ => "Overview"
+        "integrations" or "discovered" or "import" => "Integrations", "components" => "Components",
+        "systems" => "Systems", "messages" or "component-messages" => "Messages",
+        "dependencies" => "Connections & impact", "search" => "Search", _ => "Overview"
     };
-    private readonly MudTheme _theme = new() { PaletteLight = new PaletteLight { Primary = "#136f63", Secondary = "#264c72", Background = "#f7f8fa", Surface = "#ffffff", TextPrimary = "#182c3b", TextSecondary = "#5c6e7c" }, Typography = new Typography { Default = new DefaultTypography { FontFamily = ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"] } }, LayoutProperties = new LayoutProperties { DefaultBorderRadius = "10px" } };
+    private readonly MudTheme _theme = new() { PaletteLight = new PaletteLight { Primary = "#202124", Secondary = "#267354", Background = "#ffffff", Surface = "#ffffff", TextPrimary = "#202124", TextSecondary = "#666b73" }, Typography = new Typography { Default = new DefaultTypography { FontFamily = ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"] } }, LayoutProperties = new LayoutProperties { DefaultBorderRadius = "6px" } };
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (firstRender) { try { await Api.InitialiseAsync(); StateHasChanged(); } catch (HubApiException) { } } }
 }

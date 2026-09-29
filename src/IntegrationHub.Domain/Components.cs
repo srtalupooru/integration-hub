@@ -30,6 +30,8 @@ public sealed record MessageChannel
 public sealed record MessageBinding
 {
     public string Id { get; init; } = "";
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? Action { get; init; }
     public string Contract { get; init; } = "";
     public string Version { get; init; } = "";
     public MessageType MessageType { get; init; } = MessageType.Event;
@@ -53,13 +55,24 @@ public sealed record ComponentDefinition
     public string Domain { get; init; } = "";
     public string Description { get; init; } = "";
     public string Owner { get; init; } = "";
-    public string Technology { get; init; } = "";
+    [System.Text.Json.Serialization.JsonConverter(typeof(TechnologyListJsonConverter))]
+    public IReadOnlyList<string> Technology { get; init; } = [];
     public IntegrationStatus Status { get; init; } = IntegrationStatus.Draft;
     public Criticality Criticality { get; init; } = Criticality.Medium;
     public IReadOnlyList<string> Tags { get; init; } = [];
+    public IReadOnlyList<MessageBinding> Messages { get; init; } = [];
+    // Legacy source fields remain readable. Derived views are never persisted twice.
     public IReadOnlyList<MessageBinding> Consumes { get; init; } = [];
     public IReadOnlyList<MessageBinding> Publishes { get; init; } = [];
     public IReadOnlyList<MessageBinding> Sends { get; init; } = [];
     public IReadOnlyList<ApiEndpointDefinition> Endpoints { get; init; } = [];
     public IReadOnlyList<ApiCallDefinition> Calls { get; init; } = [];
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ComponentProcessing? Processing { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<MessageBinding> ConsumedMessages => Consumes.Concat(Messages.Where(m => m.Action == "consumes")).ToArray();
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<MessageBinding> PublishedMessages => Publishes.Concat(Messages.Where(m => m.Action == "publishes")).ToArray();
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<MessageBinding> SentMessages => Sends.Concat(Messages.Where(m => m.Action == "sends")).ToArray();
 }

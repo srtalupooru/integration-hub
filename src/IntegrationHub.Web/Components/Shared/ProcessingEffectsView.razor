@@ -1,0 +1,12 @@
+<div class="component-summary">
+    @foreach (var output in Effects.Outputs) { <span>May emit: <code>@output</code></span> }
+    @foreach (var call in Effects.Calls) { <span>May call: <code>@call</code></span> }
+    @foreach (var timeout in RequestsTimeouts) { <span>May request timeout: <code>@timeout</code></span> }
+    @if (CompletesSaga) { <span>May complete saga</span> }
+</div>
+@if (!string.IsNullOrWhiteSpace(Effects.Condition)) { <p><strong>Condition / behavior:</strong> @Effects.Condition</p> }
+@code {
+    [Parameter, EditorRequired] public ProcessingEffects Effects { get; set; } = new();
+    [Parameter] public IReadOnlyList<string> RequestsTimeouts { get; set; } = [];
+    [Parameter] public bool CompletesSaga { get; set; }
+}

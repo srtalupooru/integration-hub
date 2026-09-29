@@ -37,6 +37,8 @@ public sealed class ComponentWorkflow(IComponentDefinitionParser parser, ICompon
         doc = doc with { Sections = doc.Sections.Concat(new[] {
             new DocumentationSection("Source component revisions", integration.Sources.Select(s => $"{s.Id} · revision {s.Revision} · SHA-256 {s.DefinitionHash}").ToArray()),
             new DocumentationSection("Discovery findings", integration.Issues.Select(i => $"{i.Code} · {i.ComponentId}/{i.BindingId}: {i.Message} {i.Resolution}").DefaultIfEmpty("No findings.").ToArray()),
+            new DocumentationSection("Handlers and sagas (declared behavior)", new[] { "These declarations describe possible processing, not a live execution trace. Handler outputs are only associated with their explicitly declared inputs; timeout callbacks are local saga behavior." }
+                .Concat(integration.Processing.SelectMany(ProcessingEvidence.Documentation)).ToArray()),
             new DocumentationSection("HTTP calls", integration.Connections.Where(c => c.Kind == ComponentInteractionKind.HttpCall).Select(c => $"{c.ProducerId}/{c.PublishBindingId} calls {c.ConsumerId}/{c.ConsumeBindingId}: {c.HttpMethod ?? "HTTP (legacy)"} {c.HttpPath}; endpoint version {c.Version}").DefaultIfEmpty("No resolved HTTP calls.").ToArray()),
             new DocumentationSection("Matching evidence", integration.Connections.Select(c => c.Kind == ComponentInteractionKind.HttpCall
                 ? $"HTTP call: {c.ProducerId}/{c.PublishBindingId} → {c.ConsumerId}/{c.ConsumeBindingId}: {c.HttpMethod ?? "HTTP (legacy)"} {c.HttpPath}; v{c.Version}"

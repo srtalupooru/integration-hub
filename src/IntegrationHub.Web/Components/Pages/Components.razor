@@ -2,14 +2,14 @@
 @inherits ApiPage
 <PageTitle>Components · Integration Hub</PageTitle>
 <div class="page-heading">
-    <div><div class="eyebrow">THE BUILDING BLOCKS</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Widgets" /></span><h1>Components</h1></div><p>Your APIs, functions, and systems. Describe what each one does; matching calls and messages connect them into integrations.</p></div>
+    <div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Widgets" /></span><h1>Components</h1></div><p>Add and manage the APIs, functions, and services that make up your integrations.</p></div>
     <MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@HubIcons.Add">Add component</MudButton>
 </div>
 <div class="panel catalogue-toolbar"><div class="search-row">
     <MudTextField @bind-Value="_query" Label="Find a component" Placeholder="Name, type, environment or owner" Immediate="true" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@HubIcons.Search" />
     <MudCheckBox T="bool" @bind-Value="_archived" Label="Include archived" />
     <MudButton OnClick="Refresh" StartIcon="@HubIcons.Refresh">Refresh</MudButton>
-    <MudIconButton Icon="@(_table ? HubIcons.GridView : HubIcons.TableRows)" OnClick="@(() => _table = !_table)" title="Toggle card or table view" aria-label="Toggle card or table view" />
+    <MudButton StartIcon="@(_table ? HubIcons.GridView : HubIcons.TableRows)" OnClick="@(() => _table = !_table)">@(_table ? "Card view" : "Table view")</MudButton>
 </div></div>
 <PageState Loading="Loading" Error="@Error" />
 @if (_items is not null)
@@ -34,17 +34,20 @@
         <div class="catalogue-grid">
         @foreach (var c in filtered)
         {
-            <a class="integration-card component-card @ComponentVisuals.Category(c.Type)" href="@($"/components/{c.Id}")" @key="c.Id">
+            <a class="integration-card component-card component-tile @ComponentVisuals.Category(c.Type)" href="@($"/components/{c.Id}")" @key="c.Id">
                 <div class="card-top"><div class="component-identity"><span class="type-icon @ComponentVisuals.Category(c.Type)"><MudIcon Icon="@ComponentVisuals.Icon(c.Type)" /></span><div><h2>@c.Name</h2><small>@ComponentVisuals.Label(c.Type) · @c.Environment</small></div></div><StatusBadge Status="@(c.IsArchived ? "Archived" : c.Status)" /></div>
-                <div class="component-summary">
-                    @if (c.Endpoints > 0) { <span>@c.Endpoints HTTP endpoints</span> }
-                    @if (c.Calls > 0) { <span>@c.Calls outbound calls</span> }
-                    @if (c.Consumes > 0) { <span>@c.Consumes messages consumed</span> }
-                    @if (c.Sends > 0) { <span>@c.Sends commands sent</span> }
-                    @if (c.Publishes > 0) { <span>@c.Publishes events / messages published</span> }
-                    @if (c.Endpoints + c.Calls + c.Consumes + c.Sends + c.Publishes == 0) { <span>No interactions declared yet</span> }
-                </div>
-                <div class="card-bottom"><span class="card-owner"><MudIcon Icon="@HubIcons.Person" Size="Size.Small" />@ComponentVisuals.OrUnspecified(c.Owner)</span><span class="card-open" aria-label="View component"><MudIcon Icon="@HubIcons.ArrowRight" Size="Size.Small" /></span></div>
+                @if (c.Endpoints + c.Calls + c.Consumes + c.Sends + c.Publishes > 0)
+                {
+                    <ul class="component-facts" aria-label="Declared interactions">
+                        @if (c.Endpoints > 0) { <li><strong>@c.Endpoints</strong> <span>@(c.Endpoints == 1 ? "API endpoint" : "API endpoints")</span></li> }
+                        @if (c.Calls > 0) { <li><strong>@c.Calls</strong> <span>@(c.Calls == 1 ? "outbound call" : "outbound calls")</span></li> }
+                        @if (c.Consumes > 0) { <li><strong>@c.Consumes</strong> <span>@(c.Consumes == 1 ? "message received" : "messages received")</span></li> }
+                        @if (c.Sends > 0) { <li><strong>@c.Sends</strong> <span>@(c.Sends == 1 ? "command sent" : "commands sent")</span></li> }
+                        @if (c.Publishes > 0) { <li><strong>@c.Publishes</strong> <span>@(c.Publishes == 1 ? "message published" : "messages published")</span></li> }
+                    </ul>
+                }
+                else { <div class="component-no-interactions">No interactions defined yet</div> }
+                <div class="card-bottom"><span class="card-owner"><MudIcon Icon="@HubIcons.Person" Size="Size.Small" /><span>@ComponentVisuals.OrUnspecified(c.Owner)</span></span><span class="card-open" aria-label="View component"><MudIcon Icon="@HubIcons.ArrowRight" Size="Size.Small" /></span></div>
             </a>
         }
         </div>

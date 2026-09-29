@@ -12,9 +12,19 @@ public sealed record ComponentSource(string Id, string Name, int Revision, strin
 public sealed record DiscoveryIssue(string Code, string ComponentId, string? BindingId, string Message, string Resolution);
 public sealed record DiscoveredConnection(string Id, string ProducerId, string PublishBindingId, string ConsumerId,
     string ConsumeBindingId, string Contract, string Version, MessageType MessageType, MessageChannel Channel,
-    string Delivery, string? Subscription, ComponentInteractionKind Kind = ComponentInteractionKind.Message, string? HttpMethod = null, string? HttpPath = null);
+    string Delivery, string? Subscription, ComponentInteractionKind Kind = ComponentInteractionKind.Message, string? HttpMethod = null, string? HttpPath = null)
+{
+    public IReadOnlyList<ProcessingReference> HandledBy { get; init; } = [];
+    public IReadOnlyList<ProcessingReference> ProducedBy { get; init; } = [];
+}
+public sealed record ProcessingReference(string ProcessorId, string Name, string Kind, string Trigger,
+    bool StartsSaga, bool CompletesSaga, string Condition);
+public sealed record DiscoveredComponentProcessing(string ComponentId, string ComponentName, ComponentProcessing Definition);
 public sealed record DiscoveredIntegration(string Id, string Name, string Environment, IReadOnlyList<ComponentSource> Sources,
-    IntegrationDefinition Definition, IReadOnlyList<DiscoveredConnection> Connections, IReadOnlyList<DiscoveryIssue> Issues, bool HasCycle);
+    IntegrationDefinition Definition, IReadOnlyList<DiscoveredConnection> Connections, IReadOnlyList<DiscoveryIssue> Issues, bool HasCycle)
+{
+    public IReadOnlyList<DiscoveredComponentProcessing> Processing { get; init; } = [];
+}
 public sealed record DiscoveryResult(string Fingerprint, IReadOnlyList<DiscoveredIntegration> Integrations,
     IReadOnlyList<DiscoveryIssue> Issues, IReadOnlyList<string> UnlinkedComponentIds, IReadOnlyList<string> RetiredComponentIds);
 public sealed record DiscoveredIntegrationView(string Fingerprint, DiscoveredIntegration Integration, string Diagram, IntegrationDocumentation Documentation);

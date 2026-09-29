@@ -50,7 +50,11 @@ public sealed class IconRenderingTests
         html.Should().Contain("aria-label=\"Workspace\"").And.Contain("aria-label=\"Explore\"")
             .And.Contain("href=\"/integrations\" class=\"active\" aria-current=\"location\"")
             .And.Contain("aria-controls=\"workspace-navigation\"").And.Contain("aria-expanded=\"false\"")
-            .And.NotContain("href=\"/discovered\"").And.Contain("Integration details");
+            .And.NotContain("href=\"/discovered\"").And.Contain("Integration details")
+            .And.Contain("Connections &amp; impact").And.Contain("href=\"/component-messages\"");
+        var sidebar = html.Split("<aside class=\"sidebar\">")[1].Split("</aside>")[0];
+        sidebar.Should().NotContain("href=\"/search\"").And.NotContain("href=\"/import\"")
+            .And.NotContain("href=\"/swagger\"");
     }
     private sealed class TestNavigationManager : NavigationManager
     {

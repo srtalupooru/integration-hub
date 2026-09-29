@@ -9,7 +9,8 @@ component:
   status: Development
   domain: Procurement
   owner: Vendor platform team
-  technology: ASP.NET Core
+  technology:
+    - ASP.NET Core
   description: Accepts vendor creation requests and publishes vendor-created events.
   # HTTP requests are represented as endpoints, not consumed broker messages.
   endpoints:
@@ -18,8 +19,9 @@ component:
       path: /vendors
       version: "1.0"
   # The function declares the same event contract, version and topic.
-  publishes:
+  messages:
     - id: vendor-created
+      action: publishes
       contract: vendors.created
       version: "1.0"
       messageType: Event

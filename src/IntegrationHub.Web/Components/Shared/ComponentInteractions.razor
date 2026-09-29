@@ -1,7 +1,11 @@
+@if (Definition.Endpoints.Count + Definition.Calls.Count + Definition.SentMessages.Count + Definition.PublishedMessages.Count + Definition.ConsumedMessages.Count > 0)
+{
+<div class="interaction-columns">
+<section class="interaction-group"><div class="section-heading"><div><h2>Incoming</h2><p>Requests and messages this component receives.</p></div></div>
 @if (Definition.Endpoints.Count > 0)
 {
     <section class="interaction-section">
-        <div class="section-heading"><div><h2 class="section-title"><span class="section-symbol api"><MudIcon Icon="@HubIcons.Code" /></span>Exposed HTTP endpoints</h2><p>Other systems call these operations on this component.</p></div><span class="count-pill">@Definition.Endpoints.Count</span></div>
+        <div class="section-heading"><div><h3 class="section-title"><span class="section-symbol api"><MudIcon Icon="@HubIcons.Code" /></span>Exposed HTTP endpoints</h3><p>Other systems call these operations on this component.</p></div><span class="count-pill">@Definition.Endpoints.Count</span></div>
         <div class="route-list">
         @foreach (var e in Definition.Endpoints)
         {
@@ -10,10 +14,17 @@
         </div>
     </section>
 }
+@if (Consumptions.Length > 0)
+{
+    <section class="interaction-section"><div class="section-heading"><div><h3 class="section-title"><span class="section-symbol compute"><MudIcon Icon="@HubIcons.Receive" /></span>Commands / events consumed</h3><p>Broker messages this component listens for.</p></div><span class="count-pill">@Consumptions.Length</span></div><BindingTable Bindings="Consumptions" /></section>
+}
+@if (Definition.Endpoints.Count == 0 && Definition.ConsumedMessages.Count == 0) { <p class="section-empty">No incoming calls or broker messages declared.</p> }
+</section>
+<section class="interaction-group"><div class="section-heading"><div><h2>Outgoing</h2><p>Calls, commands, and events this component produces.</p></div></div>
 @if (Definition.Calls.Count > 0)
 {
     <section class="interaction-section">
-        <div class="section-heading"><div><h2 class="section-title"><span class="section-symbol api"><MudIcon Icon="@HubIcons.ArrowOut" /></span>Outbound HTTP calls</h2><p>API operations that this component calls.</p></div><span class="count-pill">@Definition.Calls.Count</span></div>
+        <div class="section-heading"><div><h3 class="section-title"><span class="section-symbol api"><MudIcon Icon="@HubIcons.ArrowOut" /></span>Outbound HTTP calls</h3><p>API operations that this component calls.</p></div><span class="count-pill">@Definition.Calls.Count</span></div>
         <div class="route-list">
         @foreach (var c in Definition.Calls)
         {
@@ -24,30 +35,29 @@
 }
 @if (Commands.Length > 0)
 {
-    <section class="interaction-section"><div class="section-heading"><div><h2 class="section-title"><span class="section-symbol messaging"><MudIcon Icon="@HubIcons.Send" /></span>Commands sent</h2><p>Requests for another component to perform an action.</p></div><span class="count-pill">@Commands.Length</span></div><BindingTable Bindings="Commands" /></section>
+    <section class="interaction-section"><div class="section-heading"><div><h3 class="section-title"><span class="section-symbol messaging"><MudIcon Icon="@HubIcons.Send" /></span>Commands sent</h3><p>Requests for another component to perform an action.</p></div><span class="count-pill">@Commands.Length</span></div><BindingTable Bindings="Commands" /></section>
 }
 @if (Publications.Length > 0)
 {
-    <section class="interaction-section"><div class="section-heading"><div><h2 class="section-title"><span class="section-symbol messaging"><MudIcon Icon="@HubIcons.Topic" /></span>Events / messages published</h2><p>Messages made available to matching consumers.</p></div><span class="count-pill">@Publications.Length</span></div><BindingTable Bindings="Publications" /></section>
+    <section class="interaction-section"><div class="section-heading"><div><h3 class="section-title"><span class="section-symbol messaging"><MudIcon Icon="@HubIcons.Topic" /></span>Events / messages published</h3><p>Messages made available to matching consumers.</p></div><span class="count-pill">@Publications.Length</span></div><BindingTable Bindings="Publications" /></section>
 }
-@if (Consumptions.Length > 0)
-{
-    <section class="interaction-section"><div class="section-heading"><div><h2 class="section-title"><span class="section-symbol compute"><MudIcon Icon="@HubIcons.Receive" /></span>Commands / events consumed</h2><p>Broker messages this component listens for.</p></div><span class="count-pill">@Consumptions.Length</span></div><BindingTable Bindings="Consumptions" /></section>
+@if (Definition.Calls.Count + Definition.SentMessages.Count + Definition.PublishedMessages.Count == 0) { <p class="section-empty">No outgoing calls or broker messages declared.</p> }
+</section></div>
 }
-@if (Definition.Consumes.Concat(Definition.Publishes).Any(b => b.Channel.Kind == ChannelKind.Http))
+@if (Definition.ConsumedMessages.Concat(Definition.PublishedMessages).Any(b => b.Channel.Kind == ChannelKind.Http))
 {
     <section class="interaction-section"><h2>Legacy HTTP declarations</h2><p class="muted">Existing links remain supported. Use endpoints and calls when updating this definition.</p>
-    @foreach (var b in Definition.Consumes.Where(b => b.Channel.Kind == ChannelKind.Http)) { <p>Accepts HTTP request: @b.Id · @b.Channel.Namespace@b.Channel.Name · @b.Contract v@b.Version</p> }
-    @foreach (var b in Definition.Publishes.Where(b => b.Channel.Kind == ChannelKind.Http)) { <p>Calls HTTP service: @b.Id · @b.Channel.Namespace@b.Channel.Name · @b.Contract v@b.Version</p> }
+    @foreach (var b in Definition.ConsumedMessages.Where(b => b.Channel.Kind == ChannelKind.Http)) { <p>Accepts HTTP request: @b.Id · @b.Channel.Namespace@b.Channel.Name · @b.Contract v@b.Version</p> }
+    @foreach (var b in Definition.PublishedMessages.Where(b => b.Channel.Kind == ChannelKind.Http)) { <p>Calls HTTP service: @b.Id · @b.Channel.Namespace@b.Channel.Name · @b.Contract v@b.Version</p> }
     </section>
 }
-@if (Definition.Endpoints.Count + Definition.Calls.Count + Definition.Sends.Count + Definition.Publishes.Count + Definition.Consumes.Count == 0)
+@if (Definition.Endpoints.Count + Definition.Calls.Count + Definition.SentMessages.Count + Definition.PublishedMessages.Count + Definition.ConsumedMessages.Count == 0)
 {
     <div class="empty-state"><h2>No interactions declared yet</h2><p>Edit this component to add its API endpoints, calls, or messages.</p></div>
 }
 @code {
     [Parameter, EditorRequired] public ComponentDefinition Definition { get; set; } = new();
-    private MessageBinding[] Commands => Definition.Sends.Concat(Definition.Publishes.Where(b => b.MessageType == MessageType.Command && b.Channel.Kind != ChannelKind.Http)).ToArray();
-    private MessageBinding[] Publications => Definition.Publishes.Where(b => b.MessageType != MessageType.Command && b.Channel.Kind != ChannelKind.Http).ToArray();
-    private MessageBinding[] Consumptions => Definition.Consumes.Where(b => b.Channel.Kind != ChannelKind.Http).ToArray();
+    private MessageBinding[] Commands => Definition.SentMessages.Concat(Definition.PublishedMessages.Where(b => b.MessageType == MessageType.Command && b.Channel.Kind != ChannelKind.Http)).ToArray();
+    private MessageBinding[] Publications => Definition.PublishedMessages.Where(b => b.MessageType != MessageType.Command && b.Channel.Kind != ChannelKind.Http).ToArray();
+    private MessageBinding[] Consumptions => Definition.ConsumedMessages.Where(b => b.Channel.Kind != ChannelKind.Http).ToArray();
 }

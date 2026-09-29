@@ -59,7 +59,7 @@ public sealed class CatalogueSearchService(HubDbContext db, IComponentRepository
         if (!string.IsNullOrWhiteSpace(q.Q))
         {
             var searchable = new[] { network.Id, network.Name, d.Description, network.Environment }
-                .Concat(members.SelectMany(c => new[] { c.Id, c.Name, c.Description, c.Domain, c.Owner, c.Technology, c.Type.ToString() }.Concat(c.Tags)))
+                .Concat(members.SelectMany(c => new[] { c.Id, c.Name, c.Description, c.Domain, c.Owner, c.Type.ToString() }.Concat(c.Technology).Concat(c.Tags).Concat(ProcessingEvidence.SearchTerms(c.Processing))))
                 .Concat(network.Connections.SelectMany(c => new[] { c.Contract, c.Channel.Namespace, c.Channel.Name, c.HttpMethod, c.HttpPath }));
             if (!searchable.Any(s => Contains(s, q.Q))) return false;
         }
@@ -69,7 +69,7 @@ public sealed class CatalogueSearchService(HubDbContext db, IComponentRepository
             && (string.IsNullOrEmpty(q.Owner) || Equal(d.Ownership.Team, q.Owner) || members.Any(c => Equal(c.Owner, q.Owner)))
             && (string.IsNullOrEmpty(q.Tag) || d.Tags.Concat(members.SelectMany(c => c.Tags)).Any(t => Equal(t, q.Tag)))
             && (string.IsNullOrEmpty(q.System) || members.Any(c => ComponentMatches(c, q.System)))
-            && (string.IsNullOrEmpty(q.Technology) || members.Any(c => Contains(c.Technology, q.Technology)))
+            && (string.IsNullOrEmpty(q.Technology) || members.Any(c => c.Technology.Any(t => Contains(t, q.Technology))))
             && (string.IsNullOrEmpty(q.Source) || members.Any(c => ComponentMatches(c, q.Source) && network.Connections.Any(l => l.ProducerId == c.Id)))
             && (string.IsNullOrEmpty(q.Destination) || members.Any(c => ComponentMatches(c, q.Destination) && network.Connections.Any(l => l.ConsumerId == c.Id)));
     }

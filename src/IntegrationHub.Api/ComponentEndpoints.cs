@@ -20,11 +20,11 @@ public static class ComponentEndpoints
         });
         api.MapGet("/components", async (bool? includeArchived, IComponentRepository repository, CancellationToken ct) =>
             (await repository.ListAsync(includeArchived == true, ct)).Select(c => new ComponentSummary(c.Definition.Id, c.Definition.Name, c.Definition.Type.ToString(),
-                c.Definition.Environment, c.Definition.Owner, c.Definition.Status.ToString(), c.Definition.Consumes.Count(b => b.Channel.Kind != ChannelKind.Http),
-                c.Definition.Publishes.Count(b => b.Channel.Kind != ChannelKind.Http && b.MessageType != MessageType.Command), c.Revision, c.UpdatedAt, c.IsArchived,
-                c.Definition.Endpoints.Count + c.Definition.Consumes.Count(b => b.Channel.Kind == ChannelKind.Http),
-                c.Definition.Calls.Count + c.Definition.Publishes.Count(b => b.Channel.Kind == ChannelKind.Http),
-                c.Definition.Sends.Count + c.Definition.Publishes.Count(b => b.Channel.Kind != ChannelKind.Http && b.MessageType == MessageType.Command))).ToArray());
+                c.Definition.Environment, c.Definition.Owner, c.Definition.Status.ToString(), c.Definition.ConsumedMessages.Count(b => b.Channel.Kind != ChannelKind.Http),
+                c.Definition.PublishedMessages.Count(b => b.Channel.Kind != ChannelKind.Http && b.MessageType != MessageType.Command), c.Revision, c.UpdatedAt, c.IsArchived,
+                c.Definition.Endpoints.Count + c.Definition.ConsumedMessages.Count(b => b.Channel.Kind == ChannelKind.Http),
+                c.Definition.Calls.Count + c.Definition.PublishedMessages.Count(b => b.Channel.Kind == ChannelKind.Http),
+                c.Definition.SentMessages.Count + c.Definition.PublishedMessages.Count(b => b.Channel.Kind != ChannelKind.Http && b.MessageType == MessageType.Command))).ToArray());
         api.MapGet("/components/{id}", async (string id, IComponentRepository repository, CancellationToken ct) => await repository.GetAsync(id, ct) ?? throw new NotFoundException("Component was not found."));
         api.MapGet("/components/{id}/versions", (string id, IComponentRepository repository, CancellationToken ct) => repository.VersionsAsync(id, ct));
         api.MapGet("/components/{id}/definition", async (string id, string? format, IComponentRepository repository, IComponentDefinitionSerializer serializer, CancellationToken ct) =>
@@ -51,8 +51,8 @@ public static class ComponentEndpoints
             await repository.SetArchivedAsync(id, expectedRevision, false, Actor(context), ct); return Results.NoContent();
         }).RequireAuthorization("Admin");
         api.MapGet("/component-messages", async (IComponentRepository repository, CancellationToken ct) =>
-            (await repository.ListAsync(false, ct)).SelectMany(c => c.Definition.Consumes.Where(b => b.Channel.Kind != ChannelKind.Http).Select(b => new ComponentMessageOccurrence(c.Definition.Id, c.Definition.Name, c.Definition.Environment, "Consumes", b))
-                .Concat(c.Definition.Publishes.Concat(c.Definition.Sends).Where(b => b.Channel.Kind != ChannelKind.Http).Select(b => new ComponentMessageOccurrence(c.Definition.Id, c.Definition.Name, c.Definition.Environment,
+            (await repository.ListAsync(false, ct)).SelectMany(c => c.Definition.ConsumedMessages.Where(b => b.Channel.Kind != ChannelKind.Http).Select(b => new ComponentMessageOccurrence(c.Definition.Id, c.Definition.Name, c.Definition.Environment, "Consumes", b))
+                .Concat(c.Definition.PublishedMessages.Concat(c.Definition.SentMessages).Where(b => b.Channel.Kind != ChannelKind.Http).Select(b => new ComponentMessageOccurrence(c.Definition.Id, c.Definition.Name, c.Definition.Environment,
                     b.MessageType == MessageType.Command ? "Sends command" : b.MessageType == MessageType.Event ? "Publishes event" : "Publishes message", b)))).ToArray());
         api.MapGet("/discovery", (ComponentWorkflow workflow, CancellationToken ct) => workflow.DiscoverAsync(ct)).WithSummary("Derive connected integration networks from HTTP endpoint references and exact command/event routes.");
         api.MapGet("/discovery/{id}", (string id, ComponentWorkflow workflow, CancellationToken ct) => workflow.GetDiscoveredAsync(id, ct));

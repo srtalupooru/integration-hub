@@ -2,7 +2,7 @@
 
 ## What you can do
 
-Define each API, function, service or calling system independently. HTTP and messaging have separate declarations: `endpoints` exposes HTTP operations, `calls` references API endpoints, `sends` declares broker commands, `publishes` declares events, and `consumes` declares broker message subscriptions. An API can expose endpoints and send commands or publish events without consuming any broker messages. Integration Hub resolves both interaction types into read-only networks, diagrams, documentation and dependency impact.
+Define each API, function, service or calling system independently. HTTP and messaging have separate declarations: `endpoints` exposes HTTP operations, `calls` references API endpoints, `messages` declares broker interactions using `action: sends` for commands, `action: publishes` for events, and `action: consumes` for subscriptions. An API can expose endpoints and send commands or publish events without consuming any broker messages. Integration Hub resolves both interaction types into read-only networks, diagrams, documentation and dependency impact.
 
 For example:
 
@@ -14,7 +14,7 @@ Vendor sync function -- PUT /vendors --> Elite API
 
 You do not write a combined integration definition or manually list other components as consumers of every publication. Existing authored integration definitions continue to work. The **Integrations** catalogue shows authored definitions and discovered networks together, labelled by kind. Its kind filter defaults to **All integrations**; search, filters, totals and pagination cover both kinds. Discovered entries open their read-only generated detail pages. **Components** holds independent source definitions, while **Discovered integrations** provides a focused view with matching findings and unlinked components. The dashboard reports these separately. Component messages are available from the Messages page's **Component messages** link, including declarations that do not yet match anything.
 
-A discovered network is a weakly connected set of components joined by resolved HTTP calls and message routes. It is a potential communication/dependency network, not an execution trace or proof that every input causes every output. A multi-purpose API can connect multiple business processes into one network. Authors who require distinct handler-level boundaries should document those handlers as separate component IDs. The application does not guess payload transformations or workflow causality.
+A discovered network is a weakly connected set of components joined by resolved HTTP calls and message routes. It is a potential communication/dependency network, not an execution trace or proof that every input causes every output. A multi-purpose API can connect multiple business processes into one network. NServiceBus handlers and sagas can be documented inside their logical endpoint component using optional `processing` metadata. Individual handler classes are not separate broker consumers. See [NServiceBus processing](nservicebus-processing.md) for local message references, correlation, timeouts, validation, and a complete three-component example. The application does not guess payload transformations or workflow causality.
 
 ## Where systems appear
 
@@ -42,7 +42,7 @@ validate and save. It will appear in Systems automatically.
 4. Add another component using **Function example**, validate and save it.
 5. Open **Integrations** with the kind filter set to **All integrations** or **Discovered**. The API and function appear as a discovered integration connected through `vendors.created` on the same topic. You can also open **Discovered integrations** for matching findings.
 6. Add the **Receiver example** and **Caller example**. Refresh Discovered integrations to see the four-component network: system → API → function → receiver API. The two HTTP edges show their methods and paths.
-7. Open its Architecture, Connections, Documentation and Findings tabs. Each edge names both source binding IDs. The source revision table records the definitions used.
+7. Open its Overview, Connections, Documentation and Review tabs. Each edge names both source binding IDs. The source revision table records the definitions used.
 8. Edit a component's message version or channel. Preview shows findings and networks whose membership would be added or removed. Save and refresh to see the recomputed result.
 9. Use **Dependencies** to analyse a `component:<id>` and see downstream components and affected discovered networks.
 
@@ -52,7 +52,7 @@ Definitions can be added in any order. Adding the consumer before its publisher 
 
 ## Definition format
 
-Both JSON and YAML use a `component` wrapper. The authoritative schema is available at `GET /api/component-schema` and in [component-definition.schema.json](../schemas/component-definition.schema.json). Unknown properties are rejected, including misspelled `publishes` or `consumes` fields.
+Both JSON and YAML use a `component` wrapper. The authoritative schema is available at `GET /api/component-schema` and in [component-definition.schema.json](../schemas/component-definition.schema.json). Unknown properties are rejected, including misspelled `messages` or `action` fields.
 
 ```yaml
 schemaVersion: "1.1"
@@ -65,14 +65,17 @@ component:
   status: Development
   domain: Procurement
   owner: Vendor platform team
-  technology: ASP.NET Core
+  technology:
+    - ASP.NET Core
+    - FastEndpoints
   endpoints:
     - id: create-vendor
       method: POST
       path: /vendors
       version: "1.0"
-  publishes:
+  messages:
     - id: vendor-created
+      action: publishes
       contract: vendors.created
       version: "1.0"
       messageType: Event
@@ -83,7 +86,7 @@ component:
       contentType: application/json
 ```
 
-The consuming function repeats the same message route under `consumes` and supplies its subscription:
+The consuming function repeats the same message route under `messages` with `action: consumes` and supplies its subscription:
 
 ```yaml
 schemaVersion: "1.1"
@@ -92,8 +95,9 @@ component:
   name: Vendor sync function
   type: AzureFunction
   environment: development
-  consumes:
+  messages:
     - id: on-vendor-created
+      action: consumes
       contract: vendors.created
       version: "1.0"
       messageType: Event
@@ -102,14 +106,28 @@ component:
         namespace: procurement-dev.servicebus.windows.net
         name: vendor-events
       subscription: elite-vendor-sync
-  publishes: []
 ```
 
-Component IDs identify one documented deployment or handler. Use different IDs for different environments. IDs, contract identities and environments are lowercase slugs; IDs are at most 96 characters. Display names may be human-readable. IDs must be unique across endpoints, calls, sends, publishes and consumes within a component. Empty sections can be omitted. A self-consuming component uses separate input/output binding IDs.
+Component IDs identify one documented deployment or handler. Use different IDs for different environments. IDs, contract identities and environments are lowercase slugs; IDs are at most 96 characters. Display names may be human-readable. IDs must be unique across endpoints, calls and message declarations within a component. Empty sections can be omitted. A self-consuming component uses separate input/output binding IDs.
 
 `version` on the component is its document/application version. `version` on a binding is the message contract version used for matching; these are independent. Contract versions must be explicit numeric versions such as `1.0`, `1.0.0` or `2.0.0-beta.1`. `latest`, `*`, ranges and implicit compatibility are not accepted.
 
 Optional component metadata includes description, domain, owner, technology, tags, status and criticality. These appear in component details and derived documentation. A retired component remains in the component catalogue but does not participate in discovery. Deprecated components still participate and receive a finding.
+
+`technology` is an optional list, defaulting to `[]`. Use a YAML block list or an
+inline list such as `technology: [ASP.NET Core, FastEndpoints]`. Up to 50 unique
+entries are accepted; each must contain 1–256 characters with no leading or trailing
+whitespace. Nulls, blank entries and non-string items are rejected. Search matches
+each technology independently, and component details display separate tags.
+
+Existing single-string definitions and stored component records remain readable.
+A nonblank legacy string becomes one entry (outer whitespace is trimmed); commas
+are not split. Blank legacy strings become an empty list. Original source and
+revision history are preserved, while formatted component JSON/YAML exports use
+lists. The component detail API also returns `technology` as an array, so external
+clients expecting a string must update. Generated integration snapshots retain the
+authored integration node format, joining technology names into its string field.
+No database migration is required.
 
 ## HTTP calls and exposed endpoints
 
@@ -141,8 +159,9 @@ HTTP links appear as synchronous `POST /vendors` or `PUT /vendors` edges. Messag
 An API can send a command after receiving an HTTP request:
 
 ```yaml
-  sends:
+  messages:
     - id: send-create-vendor
+      action: sends
       contract: vendors.create
       version: "1.0"
       messageType: Command
@@ -152,7 +171,25 @@ An API can send a command after receiving an HTTP request:
         name: vendor-commands
 ```
 
-The function repeats this contract and channel under `consumes`, with its own binding ID. `sends` requires `messageType: Command` and a broker channel (Queue, Topic or Stream). Use `publishes` for an Event and `calls` for outbound HTTP. The catalogue labels these as commands sent, events published and messages consumed. Some API-hosted applications also genuinely subscribe to brokers; those may still explicitly declare `consumes`. The component type does not invent or prohibit such a subscription.
+The function repeats this contract and channel in `messages` with `action: consumes`
+and its own binding ID. `action: sends` requires `messageType: Command`;
+`action: publishes` requires `messageType: Event`. Consumers declare the exact
+incoming type (Event, Command, Document, Request or Response). All unified messages
+use Queue, Topic or Stream channels; use `calls` for outbound HTTP. Subscriptions
+are required only for Topic/Stream consumers and prohibited on outgoing messages
+and Queue consumers. The component type does not invent or prohibit capabilities.
+
+Keep all broker declarations in one `messages` list. Do not mix it with top-level
+`publishes`, `sends` or `consumes`, even if those legacy sections are empty. An empty
+or omitted `messages` list is valid. Separate local IDs are needed when a component
+both consumes and emits the same contract. The new list has no `sourceComponent`
+or `targetComponent` selectors: message connections are derived from shared routes.
+Original source is retained exactly; formatted exports of unified definitions keep
+`messages` and each action, without adding empty legacy sections. Formatted exports
+of definitions without messages can omit the empty list. The API's component detail
+includes `messages`; existing summary counts and message occurrence routes also
+include unified declarations.
+
 
 ## Exact broker matching rules
 
@@ -174,14 +211,14 @@ Channel names, namespaces and subscriptions cannot contain whitespace. A namespa
 
 The optional `schemaFingerprint` is a lowercase 64-character SHA-256 digest of an agreed schema artifact. Generate it from the same bytes on both sides (for example `shasum -a 256 vendor-created.schema.json`). Different serialization or whitespace produces a different digest. The application neither downloads schemas nor attempts JSON Schema, Avro or XML compatibility analysis. If either side omits the fingerprint, the route can match but receives `SCHEMA_UNVERIFIED`. Conflicting supplied fingerprints or content types prevent the link.
 
-The optional `sourceComponent` on a consumption narrows it to one exact publisher ID. For legacy HTTP message declarations only, `targetComponent` on a publication narrows it to one exact receiver ID. New HTTP calls always name a target component and endpoint. A missing selector target never falls back to another component. These are documentation selectors, not deployed broker filters or access controls.
+In legacy definitions, the optional `sourceComponent` on a consumption narrows it to one exact publisher ID. For legacy HTTP message declarations only, `targetComponent` on a publication narrows it to one exact receiver ID. New HTTP calls always name a target component and endpoint. A missing selector target never falls back to another component. These are documentation selectors, not deployed broker filters or access controls.
 
 ## Delivery behaviour and ambiguous definitions
 
 | Situation | Behaviour |
 | --- | --- |
 | One publisher, several topic subscriptions | Every matching subscription receives a possible connection |
-| Multiple matching publishers | All are linked; `MULTIPLE_PUBLISHERS` asks authors to review or pin a source |
+| Multiple matching publishers | All are linked; `MULTIPLE_PUBLISHERS` asks authors to review the route (source selectors remain legacy-only) |
 | Several consumers on one queue | All are possible recipients; `COMPETING_CONSUMERS` explains that delivery is not guaranteed to each |
 | Shared topic subscription / stream consumer group | Marked as competing; different subscriptions/groups represent independent fan-out |
 | New HTTP call cannot resolve its explicit endpoint | No edge is generated; a specific `HTTP_*` finding explains the problem |
@@ -192,7 +229,7 @@ The optional `sourceComponent` on a consumption narrows it to one exact publishe
 | Duplicate binding IDs or duplicate declarations | Local validation error; cannot save |
 | Bidirectional exchange | Declare each direction as its own publication/consumption pair |
 | HTTP request/response | An explicit call references an exposed endpoint; no broker messages or response events are invented |
-| Broker request/reply | Separate explicitly declared Request and Response message contracts |
+| Broker request/reply | Legacy outgoing Request/Response bindings remain supported; unified outgoing actions currently cover Events and Commands only |
 | Self-delivery or cycles | Preserved and flagged; traversal is cycle-safe |
 | No bindings | Valid with a warning; appears under unlinked components |
 | Retired/archived component | Excluded; remaining components report any newly unmatched messages |
@@ -201,9 +238,9 @@ No fuzzy name matching, wildcard subscription rules, implicit schema conversion,
 
 ## Compatibility with existing definitions
 
-Schema versions `1.0` and `1.1` are accepted. Older `channel.kind: Http` entries in `consumes` or `publishes` remain readable and keep their existing exact contract/channel matching behaviour. They are displayed as **Legacy HTTP declarations**, excluded from broker message catalogues, and flagged with `LEGACY_HTTP_BINDING`. An HTTP method is never inferred from an old Request contract. A new `calls` reference does not silently bind to a legacy declaration with an unknown method.
+Schema versions `1.0` and `1.1` are accepted. The unified `messages` field is an additive schema capability; use `1.1` for new definitions. Existing `publishes`, `sends` and `consumes` definitions remain supported, including connections between legacy and unified components. Older `channel.kind: Http` entries in `consumes` or `publishes` remain readable and keep their existing exact contract/channel matching behaviour. They are displayed as **Legacy HTTP declarations**, excluded from broker message catalogues, and flagged with `LEGACY_HTTP_BINDING`. An HTTP method is never inferred from an old Request contract. A new `calls` reference does not silently bind to a legacy declaration with an unknown method.
 
-To migrate, replace an API's old HTTP `consumes` entry with an `endpoints` entry and replace the caller's HTTP `publishes` entry with a `calls` reference using the known method and endpoint ID. Move broker Command declarations from `publishes` to `sends`; old command publications still match and receive a migration warning. Preview the changes and save the components explicitly. Source text, archived definitions, historical revisions and stored hashes are not rewritten. These additions use the existing canonical JSON storage and require no additional database migration.
+To migrate, replace an API's old HTTP `consumes` entry with an `endpoints` entry and replace the caller's HTTP `publishes` entry with a `calls` reference using the known method and endpoint ID. For broker-only definitions, combine publications, sent commands and consumptions into `messages`, add the corresponding action to each item, and remove the legacy lists. Old command publications still match and receive a migration warning. Do not automatically migrate legacy selectors or outgoing Document/Request/Response declarations: the new format does not represent those outgoing semantics. Definitions with legacy HTTP-message declarations must migrate those to endpoints/calls before using messages. Preview the changes and save the components explicitly. Source text, archived definitions, historical revisions and stored hashes are not rewritten. These additions use the existing canonical JSON storage and require no additional database migration.
 
 ## Identity, refresh and provenance
 
@@ -270,6 +307,6 @@ Omit `expectedRevision` when creating. A valid but unresolved definition can be 
 
 ## Limits and verification
 
-Individual definitions are limited to 1 MB of UTF-8, nesting depth 64, 100 entries per interaction section (endpoints, calls, sends, consumes, publishes), and 50 tags. YAML aliases, explicit tags and multiple documents are rejected; duplicate JSON/YAML keys are rejected. Discovery fails explicitly rather than truncating if the catalogue exceeds 2,000 active components, 20,000 total interaction declarations or 50,000 resolved connections. These are protective limits, not measured throughput guarantees; the current implementation reads active definitions and derives networks on demand. Very large graphs may require inspecting the connection table or exporting the graph instead of rendering it interactively.
+Individual definitions are limited to 1 MB of UTF-8, nesting depth 64, 300 entries in messages, 100 entries per other interaction section (endpoints, calls and legacy sends/consumes/publishes), and 50 tags. YAML aliases, explicit tags and multiple documents are rejected; duplicate JSON/YAML keys are rejected. Discovery fails explicitly rather than truncating if the catalogue exceeds 2,000 active components, 20,000 total interaction declarations or 50,000 resolved connections. These are protective limits, not measured throughput guarantees; the current implementation reads active definitions and derives networks on demand. Very large graphs may require inspecting the connection table or exporting the graph instead of rendering it interactively.
 
 Automated coverage includes explicit HTTP endpoint references, method/version/environment mismatches, command sends, legacy HTTP compatibility, API-specific UI labels, exact message matching and mismatch dimensions, ordering determinism, chains, fan-out, competing groups, multiple publishers, selectors, HTTP ambiguity, missing schema fingerprints, cycles, self-delivery, membership merges/splits, retirement, archive/restore, invalid syntax/schema/semantics, both serialization formats, API access controls, CSRF, optimistic and simultaneous edits, immutable history, migration upgrades and persistence across restarts. See [verification.md](verification.md) for executed results and environment limitations.

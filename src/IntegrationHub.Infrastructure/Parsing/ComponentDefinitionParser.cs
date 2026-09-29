@@ -55,7 +55,17 @@ public sealed class ComponentDefinitionParser(ComponentDefinitionSchema schema) 
     }
     public string Serialize(ComponentDefinition definition, string format)
     {
-        var json = JsonSerializer.Serialize(new { schemaVersion = "1.1", component = definition }, CanonicalJson.Options);
+        var root = JsonSerializer.SerializeToNode(new { schemaVersion = "1.1", component = definition }, CanonicalJson.Options)!;
+        var component = root["component"]!.AsObject();
+        if (definition.Messages.Count == 0) component.Remove("messages");
+        else
+        {
+            // Do not emit empty legacy sections alongside the unified source format.
+            // Nonempty mixed sections are retained so validation can reject them.
+            foreach (var name in new[] { "consumes", "publishes", "sends" })
+                if (component[name]!.AsArray().Count == 0) component.Remove(name);
+        }
+        var json = root.ToJsonString(CanonicalJson.Options);
         if (format == "json") return json;
         if (format is not ("yaml" or "yml")) throw new ArgumentException("Format must be json or yaml.");
         using var doc = JsonDocument.Parse(json);

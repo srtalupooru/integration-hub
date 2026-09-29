@@ -1,0 +1,153 @@
+# Integration Hub Component v1.1
+# Describe one API, function, system, or service and its HTTP/message interactions.
+#
+# This is an annotated reference template. Fill the four required identity fields,
+# uncomment the interaction sections you need, and remove unused optional fields.
+# Blank YAML values are null and may fail validation.
+# Within an optional section, Required means required for each declared item.
+# All endpoint, call, and message binding IDs must be unique within the component.
+# Quote version strings. Matching is exact: '1.0' and '1.0.0' are different.
+#
+# Applicability (capabilities, not hard restrictions by component type):
+# - All types: id, name, type, environment are required. General metadata is optional.
+# - Api / ApiManagement: endpoints for exposed HTTP; calls and outgoing messages as needed.
+# - AzureFunction / LogicApp: endpoints for HTTP triggers, messages with action: consumes for broker triggers.
+#   Outbound calls and messages are optional. Timer-only triggers are not modelled.
+# - InternalSystem / ExternalSystem / SaaS: declare only actual supported interactions.
+# - Transformation: HTTP or broker sections according to its actual interface.
+# - Broker/topic/queue/event infrastructure: metadata may suffice. A broker is not
+#   automatically a business consumer; bindings describe its delivery channels.
+# - Database / Storage / Sftp / FileShare: metadata may suffice. Native SQL/file/SFTP
+#   access is not modelled by these HTTP and message sections.
+# - Library / NuGetPackage / ManualProcess / Custom: metadata may suffice; only
+#   declare HTTP/broker interactions if the component actually supports them.
+# No interaction section is mandatory solely because of a component's type.
+# Components with no interactions can be saved but remain unlinked with a warning.
+# Current HTTP calls require component references. For the proposed independent
+# endpoint-contract design and full optional-field matrix, see component-contract-design.md.
+schemaVersion: "1.1"
+
+component:
+  id: # string. Required. Unique lowercase ID. Example: invoice-api.
+  name: # string. Required. Component display name.
+  type: # 'Api' | 'ApiManagement' | 'AzureFunction' | 'LogicApp' | 'InternalSystem' | 'ExternalSystem' | 'SaaS' | 'ServiceBusTopic' | 'ServiceBusQueue' | 'MessageBroker' | 'EventGrid' | 'Database' | 'Storage' | 'Sftp' | 'FileShare' | 'Library' | 'NuGetPackage' | 'Transformation' | 'ManualProcess' | 'Custom'. Required.
+  environment: # string. Required. Lowercase environment ID. Example: development.
+
+
+  # General (all fields below are optional and apply to every component type)
+  #version: "1.0" # string. Component version. Default: '1.0'.
+  #description: # string. Component purpose.
+  #owner: # string. Responsible team.
+  #domain: # string. Business domain.
+  #technology: [] # string[]. Implementation technologies. Default: []. Up to 50 unique, nonblank entries.
+  #technology:
+  #  - ASP.NET Core
+  #  - FastEndpoints
+  # Use either the inline list or block list above, not both.
+  # Legacy single strings are accepted as one entry; commas are not split automatically.
+  #status: Draft # 'Draft' | 'Development' | 'Test' | 'Production' | 'Deprecated' | 'Retired'. Default: Draft.
+  #criticality: Medium # 'Low' | 'Medium' | 'High' | 'Critical'. Default: Medium.
+  #tags: [] # string[]. Searchable tags. Default: [].
+
+  # Exposed HTTP endpoints
+  # Optional. Enable when this component exposes HTTP operations.
+  #endpoints:
+  #  - id: # string. Required. Local endpoint ID.
+  #    method: # 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'TRACE' | 'CONNECT'. Required.
+  #    path: # string. Required. Starts with '/'. Example: /invoices/{id}.
+  #    version: "1.0" # string. Endpoint version. Default: '1.0'.
+  #    description: # string. Endpoint purpose.
+
+  # Outbound HTTP calls
+  # Optional. Enable when this component calls another component.
+  #calls:
+  #  - id: # string. Required. Local call ID.
+  #    targetComponent: # string. Required. Target component ID.
+  #    endpoint: # string. Required. Endpoint ID declared by the target.
+  #    method: # HTTP method. Required. Must match the target endpoint.
+  #    version: "1.0" # string. Must match endpoint version. Default: '1.0'.
+  #    description: # string. Call purpose.
+
+  # Messages
+  # Optional. Up to 300 outgoing and incoming broker message declarations.
+  # Do not combine messages with legacy publishes, sends, or consumes sections.
+  #messages:
+  #  - id: # string. Required. Unique local message binding ID.
+  #    action: # 'publishes' | 'sends' | 'consumes'. Required. Case-sensitive.
+  #    contract: # string. Required. Lowercase contract ID. Example: invoice.created.
+  #    version: # string. Required. Message contract version. Example: '1.0'.
+  #    messageType: # 'Event' | 'Command' | 'Document' | 'Request' | 'Response'. Required.
+  #                 # Must be Event when action = publishes; Command when action = sends.
+  #                 # For consumes, declare the exact incoming message type.
+  #    channel:
+  #      kind: # 'Topic' | 'Queue' | 'Stream'. Required. HTTP uses endpoints/calls.
+  #      namespace: # string. Required. Broker namespace or cluster identity.
+  #      name: # string. Required. Topic, queue, or stream name.
+  #    subscription: # string. Required when action = consumes AND kind = Topic or Stream.
+  #                  # Topic: subscription name. Stream: consumer group.
+  #                  # Omit for Queue and for publishes/sends.
+  #    contentType: application/json # string. Optional. Default: application/json.
+  #    schemaFingerprint: # string. Optional. Exactly 64 lowercase hexadecimal characters.
+  #    description: # string. Optional. Meaning of the message or requested action.
+  # Component selectors (sourceComponent/targetComponent) are not allowed in messages.
+  # Matching uses contract, environment, version, type, channel, and payload metadata.
+  # If receiving and emitting the same contract, declare two entries with distinct IDs.
+
+  # NServiceBus processing
+  # Optional on any component type hosting one logical NServiceBus endpoint.
+  # Design-time declarations only: does not execute code or track live saga instances.
+  # All message/output/call/timeout references below are LOCAL IDs.
+  #processing:
+  #  framework: NServiceBus # Required. Currently only NServiceBus is supported.
+  #  endpoint: # string. Required. Logical messaging endpoint name, not an HTTP URL.
+  #  transport: # string. Optional. Example: AzureServiceBus.
+  #  persistence: # string. Optional. Example: SqlPersistence. Missing with sagas warns.
+  #  sendOnly: false # Optional. If true, incoming broker messages/handlers/sagas are forbidden.
+  #  outbox: true # Optional. Omit when unknown. Documents configuration, does not verify it.
+  #  recoverability: # string. Optional. Retry/error-queue and idempotency notes.
+  #  handlers: # Optional. Up to 100 handler declarations.
+  #    - id: # string. Required. Unique across handler and saga IDs in this component.
+  #      name: # string. Optional. Display name; falls back to id.
+  #      implementation: # string. Optional. CLR handler type.
+  #      description: # string. Optional.
+  #      handles: # Required. At least one rule; each message may appear once per handler.
+  #        - message: # string. Required. Local incoming broker message ID (action: consumes).
+  #          outputs: [] # string[]. Optional. Local publishes/sends message IDs; possible outputs.
+  #          calls: [] # string[]. Optional. Local outbound HTTP call IDs; review retry safety.
+  #          condition: # string. Optional. Conditions/idempotency; descriptive, not executable.
+  #  sagas: # Optional. Up to 100 sagas. Each needs at least one handling rule or timeout.
+  #    - id: # string. Required. Unique across handler and saga IDs.
+  #      name: # string. Optional. Display name.
+  #      implementation: # string. Optional. CLR saga type.
+  #      description: # string. Optional.
+  #      dataType: # string. Optional. CLR persisted state type.
+  #      correlationProperty: # string. Required for Property/Header mappings. Business key, not Id.
+  #      whenNotFound: Discard # 'Discard' | 'Throw' | 'Custom'. Optional. Default: Discard.
+  #      notFoundDescription: # string. Required for Custom; otherwise optional.
+  #      handles:
+  #        - message: # string. Required. Local consumed broker message ID.
+  #          startsSaga: false # Optional. True means starts OR continues an instance.
+  #          correlation: # Required for every saga message rule.
+  #            mode: Property # Required. 'Property' | 'Header' | 'Custom' | 'SagaId'.
+  #            messageProperty: # string. Required ONLY for Property; omit for other modes.
+  #            #header: # string. Required ONLY for Header; omit for other modes.
+  #            description: # string. Required for Custom; otherwise optional.
+  #            # SagaId identifies an existing instance; cannot be used with startsSaga: true.
+  #          outputs: [] # string[]. Optional. Local publishes/sends IDs; possible outputs.
+  #          calls: [] # string[]. Optional. Local HTTP call IDs.
+  #          requestsTimeouts: [] # string[]. Optional. IDs from this saga's timeouts below.
+  #          completesSaga: false # Optional. Rule MAY complete the instance.
+  #          condition: # string. Optional. Describes conditional effects.
+  #      timeouts: # Optional. Internal callbacks, not external broker consumption bindings.
+  #        - id: # string. Required. Unique within this saga.
+  #          stateType: # string. Required. CLR timeout state type.
+  #          delay: PT30M # Optional. Positive ISO 8601 duration. Use delay OR schedule.
+  #          #schedule: # string. Optional. Describe dynamic due-time calculation instead of delay.
+  #          outputs: [] # string[]. Optional. Local publishes/sends IDs.
+  #          calls: [] # string[]. Optional. Local HTTP call IDs.
+  #          requestsTimeouts: [] # string[]. Optional. Further callbacks in this saga.
+  #          completesSaga: false # Optional. Callback MAY complete the instance.
+  #          condition: # string. Optional. Conditions that prevent stale/duplicate effects.
+  # Up to 500 handling + timeout rules total per component. Reference lists: at most 50 each.
+  # Multiple processors may handle one message; they do not add broker connections.
+  # See nservicebus-processing.md and examples/components/saga-*.yaml for complete examples.

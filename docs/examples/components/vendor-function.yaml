@@ -9,11 +9,20 @@ component:
   status: Development
   domain: Procurement
   owner: Integration team
-  technology: Azure Functions
+  technology:
+    - Azure Functions
   description: Consumes vendor-created events and sends an upsert request to Elite.
+  # Outbound HTTP uses calls rather than a published Request message.
+  calls:
+    - id: upsert-elite-vendor
+      targetComponent: elite-api-dev
+      endpoint: upsert-vendor
+      method: PUT
+      version: "1.0"
   # These route fields match the Vendor API publication exactly.
-  consumes:
+  messages:
     - id: on-vendor-created
+      action: consumes
       contract: vendors.created
       version: "1.0"
       messageType: Event
@@ -23,10 +32,3 @@ component:
         namespace: procurement-dev.servicebus.windows.net
         name: vendor-events
       subscription: elite-vendor-sync
-  # Outbound HTTP uses calls rather than a published Request message.
-  calls:
-    - id: upsert-elite-vendor
-      targetComponent: elite-api-dev
-      endpoint: upsert-vendor
-      method: PUT
-      version: "1.0"

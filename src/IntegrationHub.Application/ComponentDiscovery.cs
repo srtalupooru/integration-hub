@@ -15,13 +15,15 @@ public sealed class ComponentDiscovery
     public DiscoveryResult Build(IReadOnlyList<ComponentDetail> records, CancellationToken ct = default)
     {
         var active = records.Where(r => !r.IsArchived).OrderBy(r => r.Definition.Id, StringComparer.Ordinal).ToArray();
-        if (active.Length > 2000 || active.Sum(c => c.Definition.Consumes.Count + c.Definition.Publishes.Count + c.Definition.Sends.Count + c.Definition.Endpoints.Count + c.Definition.Calls.Count) > 20000)
+        if (active.Length > 2000 || active.Sum(c => c.Definition.ConsumedMessages.Count + c.Definition.PublishedMessages.Count + c.Definition.SentMessages.Count + c.Definition.Endpoints.Count + c.Definition.Calls.Count) > 20000)
             throw new ArgumentException("Discovery currently supports up to 2,000 active components and 20,000 bindings. Split the catalogue before exceeding these limits.");
         var fingerprint = Hash(active.SelectMany(c => new[] { c.Definition.Id, c.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture), c.DefinitionHash }).ToArray());
         var components = active.Where(c => c.Definition.Status != IntegrationStatus.Retired).ToArray();
+        if (components.Sum(c => c.Definition.Processing?.Handlers.Sum(h => h.Handles.Count) + c.Definition.Processing?.Sagas.Sum(s => s.Handles.Count + s.Timeouts.Count) ?? 0) > 20000)
+            throw new ArgumentException("Discovery supports at most 20,000 processing rules. Split the catalogue before exceeding this limit.");
         ct.ThrowIfCancellationRequested();
-        var publishers = components.SelectMany(c => c.Definition.Publishes.Concat(c.Definition.Sends).Select(b => new Endpoint(c, b))).ToArray();
-        var consumers = components.SelectMany(c => c.Definition.Consumes.Select(b => new Endpoint(c, b))).ToArray();
+        var publishers = components.SelectMany(c => c.Definition.PublishedMessages.Concat(c.Definition.SentMessages).Select(b => new Endpoint(c, b))).ToArray();
+        var consumers = components.SelectMany(c => c.Definition.ConsumedMessages.Select(b => new Endpoint(c, b))).ToArray();
         var consumersByRoute = consumers.GroupBy(Key).ToDictionary(g => g.Key, g => g.ToArray());
         var deliveryGroups = consumers.GroupBy(c => (Key(c), c.Binding.Subscription)).ToDictionary(g => g.Key, g => g.Count());
         var publishersByContract = publishers.GroupBy(p => p.Binding.Contract).ToDictionary(g => g.Key, g => g.ToArray());
@@ -70,7 +72,9 @@ public sealed class ComponentDiscovery
             var c = consumer.Binding;
             if (linkedConsumptions.TryGetValue((consumer.Component.Definition.Id, c.Id), out var matches))
             {
-                if (matches.Count > 1) Issue("MULTIPLE_PUBLISHERS", consumer, $"{matches.Count} publications can supply this input. All matching publishers are shown.", "Use sourceComponent if only one publisher is part of this documented route.");
+                if (matches.Count > 1) Issue("MULTIPLE_PUBLISHERS", consumer, $"{matches.Count} publications can supply this input. All matching publishers are shown.", c.Action is null
+                    ? "Use sourceComponent if only one publisher is part of this documented route."
+                    : "Confirm that multiple publishers are expected, or correct the contract and channel declarations. Messages connect by route, not by component ID.");
                 continue;
             }
             var near = publishersByContract.GetValueOrDefault(c.Contract, []);
@@ -100,6 +104,8 @@ public sealed class ComponentDiscovery
         var byId = components.ToDictionary(c => c.Definition.Id, StringComparer.Ordinal);
         foreach (var component in components)
         {
+            foreach (var warning in ComponentProcessingValidator.Validate(component.Definition).Where(i => i.Severity == ValidationSeverity.Warning))
+                issues.Add(new(warning.Code, component.Definition.Id, warning.NodeId, warning.Message, "Review this component's handler/saga declarations and the corresponding application code. These are design-time findings, not runtime diagnostics."));
             foreach (var warning in ComponentValidator.Validate(component.Definition).Issues.Where(i => i.Code.StartsWith("LEGACY_", StringComparison.Ordinal)))
                 issues.Add(new(warning.Code, component.Definition.Id, warning.NodeId, warning.Message, "Update the source definition explicitly; saved source and history are never rewritten automatically."));
             foreach (var call in component.Definition.Calls)
@@ -129,7 +135,18 @@ public sealed class ComponentDiscovery
                     ComponentInteractionKind.HttpCall, call.Method.ToString(), endpoint.Path));
             }
         }
-        var orderedLinks = links.OrderBy(l => l.Id, StringComparer.Ordinal).ToArray();
+        var steps = components.SelectMany(c => ProcessingEvidence.Steps(c.Definition.Processing).Select(s => (Component: c.Definition.Id, Step: s))).ToArray();
+        var handledBy = steps.Where(s => s.Step.Input is not null).GroupBy(s => (s.Component, Binding: s.Step.Input!))
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<ProcessingReference>)g.Select(s => s.Step.Reference).ToArray());
+        var producedBy = steps.SelectMany(s => s.Step.Outputs.Concat(s.Step.Calls).Select(b => (s.Component, Binding: b, s.Step.Reference)))
+            .GroupBy(s => (s.Component, s.Binding)).ToDictionary(g => g.Key, g => (IReadOnlyList<ProcessingReference>)g.Select(s => s.Reference).ToArray());
+        if (links.Sum(l => (long)handledBy.GetValueOrDefault((l.ConsumerId, l.ConsumeBindingId), []).Count + producedBy.GetValueOrDefault((l.ProducerId, l.PublishBindingId), []).Count) > 100000)
+            throw new ArgumentException("Discovery exceeds 100,000 handler/saga connection references. Narrow the catalogue before continuing.");
+        var orderedLinks = links.Select(l => l with
+        {
+            HandledBy = l.Kind == ComponentInteractionKind.Message ? handledBy.GetValueOrDefault((l.ConsumerId, l.ConsumeBindingId), []) : [],
+            ProducedBy = producedBy.GetValueOrDefault((l.ProducerId, l.PublishBindingId), [])
+        }).OrderBy(l => l.Id, StringComparer.Ordinal).ToArray();
         var orderedIssues = issues.Distinct().OrderBy(i => i.ComponentId, StringComparer.Ordinal).ThenBy(i => i.BindingId, StringComparer.Ordinal).ThenBy(i => i.Code, StringComparer.Ordinal).ThenBy(i => i.Message, StringComparer.Ordinal).ToArray();
         var nodes = components.Select(c => Node(c.Definition)).ToArray();
         var edges = orderedLinks.Select(Edge).ToArray();
@@ -155,7 +172,7 @@ public sealed class ComponentDiscovery
             var messages = connections.Where(l => l.Kind == ComponentInteractionKind.Message).GroupBy(l => (l.ProducerId, l.PublishBindingId)).Select(group =>
             {
                 var publisher = byId[group.Key.ProducerId].Definition;
-                var binding = publisher.Publishes.Concat(publisher.Sends).Single(b => b.Id == group.Key.PublishBindingId);
+                var binding = publisher.PublishedMessages.Concat(publisher.SentMessages).Single(b => b.Id == group.Key.PublishBindingId);
                 return new IntegrationMessage { Name = binding.Contract + "@" + binding.Version + "#" + Hash(group.Key.ProducerId, group.Key.PublishBindingId)[..16],
                     Type = binding.MessageType, Version = binding.Version, Producer = group.Key.ProducerId,
                     Consumers = group.Select(l => l.ConsumerId).Distinct().Order(StringComparer.Ordinal).ToArray(),
@@ -171,7 +188,11 @@ public sealed class ComponentDiscovery
                 Tags = ["discovered"], Nodes = componentRecords.Select(c => Node(c.Definition)).ToArray(), Edges = componentEdges, Messages = messages,
                 Metadata = new Dictionary<string, string> { ["origin"] = "component-discovery", ["snapshot"] = fingerprint,
                     ["sourceRevisions"] = string.Join(", ", sources.Select(s => $"{s.Id}@{s.Revision}")), ["readOnly"] = "true" } };
-            integrations.Add(new(id, name, environment, sources, definition, connections, localIssues, hasCycle));
+            integrations.Add(new(id, name, environment, sources, definition, connections, localIssues, hasCycle)
+            {
+                Processing = componentRecords.Where(c => c.Definition.Processing is not null)
+                    .Select(c => new DiscoveredComponentProcessing(c.Definition.Id, c.Definition.Name, c.Definition.Processing!)).ToArray()
+            });
         }
         return new(fingerprint, integrations.OrderBy(i => i.Id, StringComparer.Ordinal).ToArray(),
             orderedIssues.Concat(integrations.SelectMany(i => i.Issues).Where(i => i.Code == "CYCLIC_FLOW")).ToArray(),
@@ -184,10 +205,10 @@ public sealed class ComponentDiscovery
         return text.Length <= 256 ? text : fallback;
     }
     private static IntegrationNode Node(ComponentDefinition c) => new() { Id = c.Id, Name = c.Name, Type = c.Type, Environment = c.Environment,
-        Description = c.Description, Technology = c.Technology, Owner = c.Owner, Metadata = new Dictionary<string, string> { ["componentId"] = c.Id } };
+        Description = c.Description, Technology = string.Join(", ", c.Technology), Owner = c.Owner, Metadata = new Dictionary<string, string> { ["componentId"] = c.Id } };
     private static IntegrationEdge Edge(DiscoveredConnection c) => new() { Id = c.Id, FromNodeId = c.ProducerId, ToNodeId = c.ConsumerId,
         Label = c.Kind == ComponentInteractionKind.HttpCall ? $"{c.HttpMethod ?? "HTTP"} {c.HttpPath} (v{c.Version})" : $"{c.MessageType}: {c.Contract} v{c.Version}" + (c.Delivery == "Competing" ? " (competing)" : ""),
-        Description = $"{c.ProducerId}/{c.PublishBindingId} → {c.ConsumerId}/{c.ConsumeBindingId}; {c.Channel.Namespace}/{c.Channel.Name}; {c.Delivery}; subscription: {c.Subscription ?? "n/a"}",
+        Description = $"{c.ProducerId}/{c.PublishBindingId} → {c.ConsumerId}/{c.ConsumeBindingId}; {c.Channel.Namespace}/{c.Channel.Name}; {c.Delivery}; subscription: {c.Subscription ?? "n/a"}; declared handling rules: {c.HandledBy.Count}; possible producing rules: {c.ProducedBy.Count}. See processing evidence for details.",
         TransportType = c.Channel.Kind.ToString(), Protocol = c.Channel.Kind == ChannelKind.Http ? "HTTP" : c.Channel.Kind.ToString(),
         Mode = c.Channel.Kind == ChannelKind.Http ? InteractionMode.Synchronous : InteractionMode.Asynchronous };
 }

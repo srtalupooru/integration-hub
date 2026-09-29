@@ -19,6 +19,49 @@ public sealed class ComponentDiscoveryTests
     private static ComponentDetail Consumer(string id = "function") => Component(id, consumes: [Binding(consume: true)]);
 
     [Test]
+    public void Processing_evidence_is_deterministic_and_does_not_invent_routes_or_causality()
+    {
+        var producer = Producer() with { Definition = Producer().Definition with { Processing = new()
+        {
+            Endpoint = "Publisher", Sagas = [new() { Id = "expiry", Timeouts = [new()
+            { Id = "deadline", StateType = "TimeoutState", Delay = "PT1H", Outputs = ["event"], CompletesSaga = true }] }]
+        } } };
+        var consumer = Consumer() with { Definition = Consumer().Definition with { Processing = new()
+        {
+            Endpoint = "Consumer", Handlers = [new() { Id = "audit", Handles = [new() { Message = "event" }] },
+                new() { Id = "process", Handles = [new() { Message = "event", Condition = "Only when ready" }] }]
+        } } };
+        var result = _discovery.Build([producer, consumer]);
+        _discovery.Build([consumer, producer]).Should().BeEquivalentTo(result, o => o.WithStrictOrdering());
+        var flow = result.Integrations.Single(); flow.Definition.Nodes.Should().HaveCount(2);
+        var link = flow.Connections.Should().ContainSingle().Subject;
+        link.HandledBy.Select(p => p.ProcessorId).Should().Equal("audit", "process");
+        link.ProducedBy.Should().ContainSingle(r => r.Kind == "Saga timeout" && r.Trigger == "deadline" && r.CompletesSaga);
+        flow.Processing.Should().HaveCount(2);
+        var mismatch = consumer with { Definition = consumer.Definition with { Environment = "production" } };
+        _discovery.Build([producer, mismatch]).Integrations.Should().BeEmpty();
+        _discovery.Build([producer, consumer with { IsArchived = true }]).Integrations.Should().BeEmpty();
+        var noEvidence = consumer with { Definition = consumer.Definition with { Processing = null } };
+        var remaining = _discovery.Build([producer, noEvidence]).Integrations.Single();
+        remaining.Id.Should().Be(flow.Id); remaining.Connections.Single().HandledBy.Should().BeEmpty();
+    }
+
+    [TestCase(false, true)]
+    [TestCase(true, false)]
+    [TestCase(true, true)]
+    public void Unified_and_legacy_components_resolve_to_the_same_connections(bool newProducer, bool newConsumer)
+    {
+        var producer = Producer(); var consumer = Consumer();
+        var expected = _discovery.Build([producer, consumer]);
+        if (newProducer) producer = producer with { Definition = producer.Definition with { Publishes = [], Messages = [Binding() with { Action = "publishes" }] } };
+        if (newConsumer) consumer = consumer with { Definition = consumer.Definition with { Consumes = [], Messages = [Binding(consume: true) with { Action = "consumes" }] } };
+        _discovery.Build([consumer, producer]).Should().BeEquivalentTo(expected);
+        var changed = consumer.Definition.ConsumedMessages.Single() with { Version = "2.0" };
+        consumer = consumer with { Definition = newConsumer ? consumer.Definition with { Messages = [changed] } : consumer.Definition with { Consumes = [changed] } };
+        _discovery.Build([producer, consumer]).Integrations.Should().BeEmpty();
+    }
+
+    [Test]
     public void Api_function_receiver_chain_generates_one_integration_with_evidence()
     {
         var function = Component("function", [Binding("out", "vendor.synced")], [Binding("in", consume: true)]);

@@ -1,3 +1,4 @@
+@inject Microsoft.AspNetCore.Mvc.ViewFeatures.IFileVersionProvider FileVersions
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
-    <link rel="stylesheet" href="_content/IntegrationHub.Web/hub.css" />
-    <link rel="stylesheet" href="_content/IntegrationHub.Web/workspace.css" />
+    <link rel="stylesheet" href="@FileVersions.AddFileVersionToPath("/", "_content/IntegrationHub.Web/hub.css")" />
+    <link rel="stylesheet" href="@FileVersions.AddFileVersionToPath("/", "_content/IntegrationHub.Web/workspace.css")" />
     <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
 </head>
 <body>

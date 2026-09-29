@@ -100,6 +100,23 @@ public sealed class ApiTests
         (await viewer.PostAsJsonAsync("/api/integrations", new DefinitionRequest(TestDefinitions.Json))).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await viewer.DeleteAsync("/api/systems/erp")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
+    [Test]
+    public async Task Stylesheet_links_use_content_hashes_and_resolve_to_current_assets()
+    {
+        var html = await _client.GetStringAsync("/components");
+        foreach (var file in new[] { "hub.css", "workspace.css" })
+        {
+            var pattern = "href=\"(?<url>_content/IntegrationHub.Web/" + System.Text.RegularExpressions.Regex.Escape(file) + "\\?v=[^\"]+)\"";
+            var match = System.Text.RegularExpressions.Regex.Match(html, pattern);
+            match.Success.Should().BeTrue($"{file} should have a content version to avoid stale styles");
+            var response = await _client.GetAsync("/" + WebUtility.HtmlDecode(match.Groups["url"].Value));
+            response.EnsureSuccessStatusCode();
+            response.Content.Headers.ContentType!.MediaType.Should().Be("text/css");
+            var content = await response.Content.ReadAsByteArrayAsync();
+            var hash = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(System.Security.Cryptography.SHA256.HashData(content));
+            match.Groups["url"].Value.Should().EndWith("?v=" + hash);
+        }
+    }
     [TestCase("/_content/IntegrationHub.Web/hub.css", "text/css")]
     [TestCase("/_content/IntegrationHub.Web/workspace.css", "text/css")]
     [TestCase("/_content/IntegrationHub.Web/hub.js", "text/javascript")]

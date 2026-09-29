@@ -8,6 +8,59 @@ namespace IntegrationHub.Infrastructure.Tests;
 public sealed class ComponentParserTests
 {
     private readonly ComponentDefinitionParser _parser = new(new());
+    [TestCase("[\"ASP.NET Core\",\"FastEndpoints\"]", 2)]
+    [TestCase("[]", 0)]
+    [TestCase("\"ASP.NET Core, FastEndpoints\"", 1)]
+    [TestCase("\"  ASP.NET Core  \"", 1)]
+    [TestCase("\"\"", 0)]
+    public void Technology_lists_and_legacy_strings_export_as_lists_and_round_trip(string technology, int count)
+    {
+        var root = JsonNode.Parse(Json())!;
+        root["component"]!["technology"] = JsonNode.Parse(technology);
+        var parsed = _parser.Parse(new(root.ToJsonString()));
+        parsed.Validation.IsValid.Should().BeTrue();
+        parsed.Definition!.Technology.Should().HaveCount(count);
+        foreach (var format in new[] { "json", "yaml" })
+        {
+            var exported = _parser.Serialize(parsed.Definition, format);
+            var restored = _parser.Parse(new(exported, format));
+            restored.Validation.IsValid.Should().BeTrue();
+            restored.Definition!.Technology.Should().Equal(parsed.Definition.Technology);
+        }
+        JsonNode.Parse(_parser.Serialize(parsed.Definition, "json"))!["component"]!["technology"].Should().BeOfType<JsonArray>();
+    }
+
+    [TestCase("null")]
+    [TestCase("{}")]
+    [TestCase("42")]
+    [TestCase("[42]")]
+    [TestCase("[null]")]
+    [TestCase("[\"\"]")]
+    [TestCase("[\"   \"]")]
+    [TestCase("[\" padded \"]")]
+    [TestCase("[\".NET\",\".NET\"]")]
+    public void Invalid_technology_lists_report_schema_errors(string technology)
+    {
+        var root = JsonNode.Parse(Json())!;
+        root["component"]!["technology"] = JsonNode.Parse(technology);
+        var parsed = _parser.Parse(new(root.ToJsonString()));
+        parsed.Validation.IsValid.Should().BeFalse();
+        parsed.Validation.Issues.Should().Contain(i => i.Level == ValidationLevel.Schema && i.Path!.StartsWith("/component/technology"));
+    }
+
+    [Test]
+    public void Technology_defaults_and_limits_are_enforced()
+    {
+        var root = JsonNode.Parse(Json())!;
+        root["component"]!.AsObject().Remove("technology");
+        _parser.Parse(new(root.ToJsonString())).Definition!.Technology.Should().BeEmpty();
+        root["component"]!["technology"] = new JsonArray(Enumerable.Range(0, 50).Select(i => JsonValue.Create($"Technology {i}")).ToArray());
+        _parser.Parse(new(root.ToJsonString())).Validation.IsValid.Should().BeTrue();
+        root["component"]!["technology"]!.AsArray().Add("One too many");
+        _parser.Parse(new(root.ToJsonString())).Validation.IsValid.Should().BeFalse();
+        root["component"]!["technology"] = new JsonArray(new string('a', 257));
+        _parser.Parse(new(root.ToJsonString())).Validation.IsValid.Should().BeFalse();
+    }
     private string Json()
     {
         var parsed = _parser.Parse(new(ComponentExamples.Read("vendor-api")));
@@ -63,10 +116,10 @@ public sealed class ComponentParserTests
         {
             case "unknown": c["publishs"] = new JsonArray(); break;
             case "environment": c["environment"] = "Development "; break;
-            case "version": c["publishes"]![0]!["version"] = "*"; break;
+            case "version": c["messages"]![0]!["version"] = "*"; break;
             case "null-list": c["consumes"] = null; break;
             case "integer-enum": c["type"] = 2; break;
-            case "whitespace-channel": c["publishes"]![0]!["channel"]!["name"] = " "; break;
+            case "whitespace-channel": c["messages"]![0]!["channel"]!["name"] = " "; break;
         }
         _parser.Parse(new(root.ToJsonString())).Validation.IsValid.Should().BeFalse();
     }
@@ -80,10 +133,10 @@ public sealed class ComponentParserTests
     {
         var definition = _parser.Parse(new(ComponentExamples.Read("vendor-function"))).Definition!;
         // Exercise legacy HTTP-message compatibility as well as current broker validation.
-        var consume = definition.Consumes.Single();
+        var consume = definition.ConsumedMessages.Single() with { Action = null };
         var publish = new MessageBinding { Id = "legacy-http", Contract = "vendors.upsert", Version = "1.0", MessageType = MessageType.Request,
             Channel = new() { Kind = ChannelKind.Http, Namespace = "elite-api-dev", Name = "/vendors" }, TargetComponent = "elite-api-dev" };
-        definition = definition with { Publishes = [publish], Calls = [] };
+        definition = definition with { Messages = [], Consumes = [consume], Publishes = [publish], Calls = [] };
         definition = change switch
         {
             "duplicate-id" => definition with { Publishes = [publish with { Id = consume.Id }] },
@@ -124,8 +177,8 @@ public sealed class ComponentParserTests
             case "path": c["endpoints"]![0]!["path"] = "/vendors?secret=example"; break;
             case "null-endpoints": c["endpoints"] = null; break;
             case "call-target": c["calls"] = JsonNode.Parse("[{\"id\":\"c\",\"endpoint\":\"e\",\"method\":\"POST\"}]"); break;
-            case "command-type": c["sends"]![0]!["messageType"] = "Event"; break;
-            case "command-http": c["sends"]![0]!["channel"]!["kind"] = "Http"; break;
+            case "command-type": c["messages"]![0]!["messageType"] = "Event"; break;
+            case "command-http": c["messages"]![0]!["channel"]!["kind"] = "Http"; break;
         }
         _parser.Parse(new(root.ToJsonString())).Validation.IsValid.Should().BeFalse();
     }

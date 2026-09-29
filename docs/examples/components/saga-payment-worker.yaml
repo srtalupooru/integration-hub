@@ -1,0 +1,38 @@
+schemaVersion: "1.1"
+component:
+  id: payment-worker-dev
+  name: Payment worker
+  type: AzureFunction
+  environment: development
+  owner: Payments team
+  technology: [Azure Functions, NServiceBus]
+  messages:
+    - id: on-request-payment
+      action: consumes
+      contract: payment.request
+      version: "1.0"
+      messageType: Command
+      channel:
+        kind: Queue
+        namespace: finance-dev.servicebus.windows.net
+        name: payment-commands
+    - id: payment-confirmed
+      action: publishes
+      contract: payment.confirmed
+      version: "1.0"
+      messageType: Event
+      channel:
+        kind: Topic
+        namespace: finance-dev.servicebus.windows.net
+        name: payment-events
+  processing:
+    framework: NServiceBus
+    endpoint: Finance.Payments
+    transport: AzureServiceBus
+    handlers:
+      - id: request-payment-handler
+        implementation: Finance.Handlers.RequestPaymentHandler
+        handles:
+          - message: on-request-payment
+            outputs: [payment-confirmed]
+            condition: Publish confirmation after successful processing, preserving InvoiceId. No confirmation is asserted on failure.

@@ -1,0 +1,28 @@
+# Import with saga-worker.yaml and saga-payment-worker.yaml, in any order.
+schemaVersion: "1.1"
+component:
+  id: invoice-api-dev
+  name: Invoice API
+  type: Api
+  environment: development
+  owner: Finance team
+  technology: [ASP.NET Core, NServiceBus]
+  endpoints:
+    - id: create-invoice
+      method: POST
+      path: /invoices
+  messages:
+    - id: invoice-created
+      action: publishes
+      contract: invoice.created
+      version: "1.0"
+      messageType: Event
+      channel:
+        kind: Topic
+        namespace: finance-dev.servicebus.windows.net
+        name: invoice-events
+  processing:
+    framework: NServiceBus
+    endpoint: Finance.InvoiceApi
+    transport: AzureServiceBus
+    sendOnly: true

@@ -1,12 +1,31 @@
 @page "/component-messages"
 @inherits ApiPage
-<PageTitle>Component messages · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">MESSAGE CONTRACTS</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Forum" /></span><h1>Component messages</h1></div><p>Published events, sent commands and consumed messages, including unresolved declarations. HTTP calls and exposed endpoints are listed on the component pages.</p></div><MudButton Href="/discovered" Color="Color.Primary">View discovered flows →</MudButton></div>
-<div class="catalogue-modes"><a href="/messages">Authored integration messages</a><strong>Component messages</strong></div>
-<div class="panel search-row"><MudTextField @bind-Value="_query" Immediate="true" Label="Search contract, component, channel or environment" /><MudButton OnClick="Refresh">Refresh</MudButton></div>
+<PageTitle>Messages · Integration Hub</PageTitle>
+<div class="page-heading"><div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Forum" /></span><h1>Messages</h1></div><p>See which components publish, send, and receive each message.</p></div><MudButton Href="/integrations" Color="Color.Primary">View integrations →</MudButton></div>
+<nav class="catalogue-modes" aria-label="Message source"><strong aria-current="page">From components</strong><a href="/messages">From imported integrations</a></nav>
+<div class="panel catalogue-toolbar"><div class="search-row"><MudTextField @bind-Value="_query" Immediate="true" Label="Find a message" Placeholder="Contract, component or channel" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@HubIcons.Search" /><MudButton OnClick="Refresh" StartIcon="@HubIcons.Refresh">Refresh</MudButton></div></div>
 <PageState Loading="Loading" Error="@Error" />
-@if (_items is not null) { var filtered = _items.Where(i => $"{i.Binding.Contract} {i.Binding.Version} {i.ComponentId} {i.Environment} {i.Binding.Channel.Namespace} {i.Binding.Channel.Name}".Contains(_query, StringComparison.OrdinalIgnoreCase)).ToArray();
-    <p class="muted">@filtered.Length bindings</p><div class="panel table-scroll"><table><thead><tr><th>Contract / version</th><th>Component</th><th>Direction</th><th>Environment</th><th>Channel</th></tr></thead><tbody>@foreach (var i in filtered) { <tr><td>@i.Binding.Contract v@i.Binding.Version<small>@i.Binding.MessageType</small></td><td><a href="@($"/components/{i.ComponentId}")">@i.ComponentName</a><small>@i.Binding.Id</small></td><td>@i.Direction</td><td>@i.Environment</td><td>@i.Binding.Channel.Kind · @i.Binding.Channel.Namespace / @i.Binding.Channel.Name<small>@i.Binding.Subscription</small></td></tr> }</tbody></table></div>
+@if (_items is not null)
+{
+    var filtered = _items.Where(i => $"{i.Binding.Contract} {i.Binding.Version} {i.ComponentId} {i.ComponentName} {i.Direction} {i.Environment} {i.Binding.Channel.Namespace} {i.Binding.Channel.Name}".Contains(_query, StringComparison.OrdinalIgnoreCase)).ToArray();
+    <div class="results-heading"><span><strong>@filtered.Length</strong> message declarations</span><span>Each row describes one component’s role.</span></div>
+    @if (filtered.Length == 0)
+    {
+        <section class="panel empty-state"><MudIcon Icon="@HubIcons.Forum" Size="Size.Large" /><h2>@(_items.Length == 0 ? "No messages yet" : "No matching messages")</h2><p>@(_items.Length == 0 ? "Add messages to a component definition to see them here." : "Try a different contract, component, or channel name.")</p><MudButton Href="/components" Color="Color.Primary">Browse components</MudButton></section>
+    }
+    else
+    {
+        <div class="panel table-scroll"><table><thead><tr><th>Message</th><th>Component</th><th>Role</th><th>Route</th></tr></thead><tbody>
+        @foreach (var i in filtered)
+        {
+            <tr><td><strong>@i.Binding.Contract</strong><small>@i.Binding.MessageType · v@i.Binding.Version</small></td>
+                <td><a href="@($"/components/{i.ComponentId}")">@i.ComponentName</a><small>@i.Environment</small></td>
+                <td><span class="badge">@i.Direction</span></td>
+                <td><span>@i.Binding.Channel.Name</span><details class="quiet-details"><summary>Routing details</summary><dl class="technical-grid"><dt>Channel</dt><dd>@i.Binding.Channel.Kind</dd><dt>Namespace</dt><dd>@i.Binding.Channel.Namespace</dd>@if (i.Binding.Subscription is not null) { <dt>Subscription</dt><dd>@i.Binding.Subscription</dd> }<dt>Declaration ID</dt><dd><code>@i.Binding.Id</code></dd></dl></details></td></tr>
+        }
+        </tbody></table></div>
+        <p class="content-footnote">Declarations include messages without a matching sender or receiver. Open Integrations to see resolved connections.</p>
+    }
 }
 @code {
     private ComponentMessageOccurrence[]? _items;

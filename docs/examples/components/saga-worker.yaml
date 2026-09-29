@@ -1,0 +1,104 @@
+# A Function App hosts one logical endpoint, an invoice saga, and an audit handler.
+# The saga and handler belong to this component and share its consumed event.
+# These are design declarations; no live saga instances or schedules are created.
+schemaVersion: "1.1"
+component:
+  id: invoice-process-dev
+  name: Invoice processing Function App
+  type: AzureFunction
+  environment: development
+  owner: Finance team
+  technology: [Azure Functions, .NET, NServiceBus]
+  messages:
+    - id: on-invoice-created
+      action: consumes
+      contract: invoice.created
+      version: "1.0"
+      messageType: Event
+      channel:
+        kind: Topic
+        namespace: finance-dev.servicebus.windows.net
+        name: invoice-events
+      subscription: invoice-process
+    - id: on-payment-confirmed
+      action: consumes
+      contract: payment.confirmed
+      version: "1.0"
+      messageType: Event
+      channel:
+        kind: Topic
+        namespace: finance-dev.servicebus.windows.net
+        name: payment-events
+      subscription: invoice-process
+    - id: request-payment
+      action: sends
+      contract: payment.request
+      version: "1.0"
+      messageType: Command
+      channel:
+        kind: Queue
+        namespace: finance-dev.servicebus.windows.net
+        name: payment-commands
+    - id: invoice-completed
+      action: publishes
+      contract: invoice.completed
+      version: "1.0"
+      messageType: Event
+      channel:
+        kind: Topic
+        namespace: finance-dev.servicebus.windows.net
+        name: invoice-events
+    - id: invoice-expired
+      action: publishes
+      contract: invoice.expired
+      version: "1.0"
+      messageType: Event
+      channel:
+        kind: Topic
+        namespace: finance-dev.servicebus.windows.net
+        name: invoice-events
+  processing:
+    framework: NServiceBus
+    endpoint: Finance.InvoiceProcess
+    transport: AzureServiceBus
+    persistence: SqlPersistence
+    outbox: true
+    recoverability: Review configured immediate/delayed retries; audit writes must be idempotent.
+    handlers:
+      - id: audit-invoice
+        name: Audit invoice handler
+        implementation: Finance.Handlers.AuditInvoiceHandler
+        handles:
+          - message: on-invoice-created
+            condition: Record an idempotent audit entry. This handler emits no messages.
+    sagas:
+      - id: invoice-lifecycle
+        name: Invoice lifecycle saga
+        implementation: Finance.Sagas.InvoiceSaga
+        dataType: Finance.Sagas.InvoiceSagaData
+        correlationProperty: InvoiceId
+        whenNotFound: Throw
+        notFoundDescription: Throw for unmatched continuations; recoverability may retry, then move to the error queue.
+        handles:
+          - message: on-invoice-created
+            startsSaga: true
+            correlation:
+              mode: Property
+              messageProperty: InvoiceId
+            outputs: [request-payment]
+            requestsTimeouts: [payment-deadline]
+            condition: Request payment only if not already requested for this invoice.
+          - message: on-payment-confirmed
+            correlation:
+              mode: Property
+              messageProperty: InvoiceId
+            outputs: [invoice-completed]
+            completesSaga: true
+            condition: Complete once the expected payment is confirmed; duplicate delivery must be safe.
+        timeouts:
+          - id: payment-deadline
+            stateType: Finance.Sagas.PaymentDeadline
+            delay: PT30M
+            outputs: [invoice-expired]
+            completesSaga: true
+            condition: Expire only while payment remains outstanding. Completed saga instances ignore this callback.

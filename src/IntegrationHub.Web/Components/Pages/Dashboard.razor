@@ -1,11 +1,11 @@
 @page "/"
 @inherits ApiPage
 <PageTitle>Dashboard · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">YOUR WORKSPACE</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.SpaceDashboard" /></span><h1>Workspace overview</h1></div><p>Understand what you have, how it connects, and what needs a closer look.</p></div><MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@HubIcons.Add">Add component</MudButton></div>
+<div class="page-heading"><div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.SpaceDashboard" /></span><h1>Workspace overview</h1></div><p>See your components, connected integrations, and items to review.</p></div><MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@HubIcons.Add">Add component</MudButton></div>
 <PageState Loading="Loading" Error="@Error" />
 @if (_dashboard is not null && _components is not null)
 {
-    <div class="metric-grid">
+    <div class="metric-grid overview-metrics">
         @foreach (var metric in Metrics())
         { <div class="metric-card"><span>@metric.Label</span><span class="metric-symbol"><MudIcon Icon="@metric.Icon" /></span><strong>@metric.Value</strong><small>@metric.Note</small></div> }
     </div>
@@ -15,7 +15,7 @@
     }
     <div class="dashboard-grid mt-6">
         <section class="panel">
-            <div class="panel-heading"><div><h2>Recently updated integrations</h2><p>Authored definitions and automatically discovered flows.</p></div><a href="/integrations">View all →</a></div>
+            <div class="panel-heading"><div><h2>Recently updated integrations</h2><p>Your latest changes.</p></div><a href="/integrations">View all →</a></div>
             @if (_recent is not null && _recent.Items.Count > 0)
             {
                 @foreach (var entry in _recent.Items)
@@ -26,7 +26,7 @@
             }
             else { <p>Your integrations will appear here once you import a definition or connect components.</p> }
         </section>
-        <section class="panel"><div class="panel-heading"><h2>Where would you like to start?</h2></div><div class="quick-actions">
+        <section class="panel"><div class="panel-heading"><h2>Next steps</h2></div><div class="quick-actions">
             <a class="quick-action" href="/components"><MudIcon Icon="@HubIcons.Widgets" /><span><strong>Explore components</strong><small>APIs, functions, and the messages they exchange.</small></span></a>
             <a class="quick-action" href="/integrations"><MudIcon Icon="@HubIcons.AccountTree" /><span><strong>See connected integrations</strong><small>Follow a flow from source to destination.</small></span></a>
             <a class="quick-action" href="/discovered"><MudIcon Icon="@HubIcons.Rule" /><span><strong>Review connection findings</strong><small>Understand why components match or remain unlinked.</small></span></a>

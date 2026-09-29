@@ -81,8 +81,24 @@
           "maxLength": 256
         },
         "technology": {
-          "type": "string",
-          "maxLength": 256
+          "description": "Implementation technologies. A legacy string is accepted as one entry; new definitions should use an array.",
+          "oneOf": [
+            {
+              "type": "array",
+              "maxItems": 50,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+              }
+            },
+            {
+              "type": "string",
+              "maxLength": 256
+            }
+          ]
         },
         "status": {
           "enum": [
@@ -147,8 +163,44 @@
           "items": {
             "$ref": "#/$defs/command"
           }
+        },
+        "messages": {
+          "type": "array",
+          "maxItems": 300,
+          "items": {
+            "$ref": "#/$defs/message"
+          }
+        },
+        "processing": {
+          "$ref": "#/$defs/processing"
         }
-      }
+      },
+      "allOf": [
+        {
+          "not": {
+            "required": [
+              "messages",
+              "consumes"
+            ]
+          }
+        },
+        {
+          "not": {
+            "required": [
+              "messages",
+              "publishes"
+            ]
+          }
+        },
+        {
+          "not": {
+            "required": [
+              "messages",
+              "sends"
+            ]
+          }
+        }
+      ]
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -446,6 +498,501 @@
           "pattern": "^\\S+$"
         }
       }
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "contract",
+        "version",
+        "messageType",
+        "channel",
+        "action"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "contract": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+        },
+        "messageType": {
+          "enum": [
+            "Event",
+            "Command",
+            "Document",
+            "Request",
+            "Response"
+          ]
+        },
+        "channel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "namespace",
+            "name"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "Topic",
+                "Queue",
+                "Stream"
+              ]
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^\\S+$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^\\S+$"
+            }
+          }
+        },
+        "contentType": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$"
+        },
+        "schemaFingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "subscription": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^\\S+$"
+        },
+        "action": {
+          "enum": [
+            "publishes",
+            "sends",
+            "consumes"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "publishes"
+              }
+            },
+            "required": [
+              "action"
+            ]
+          },
+          "then": {
+            "properties": {
+              "messageType": {
+                "const": "Event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "sends"
+              }
+            },
+            "required": [
+              "action"
+            ]
+          },
+          "then": {
+            "properties": {
+              "messageType": {
+                "const": "Command"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "handlingRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "outputs": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "uniqueItems": true
+        },
+        "calls": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "uniqueItems": true
+        },
+        "condition": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "sagaCorrelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "Property",
+            "Header",
+            "Custom",
+            "SagaId"
+          ]
+        },
+        "messageProperty": {
+          "type": "string",
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+        },
+        "header": {
+          "type": "string",
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "mode"
+      ]
+    },
+    "sagaHandlingRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "outputs": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "uniqueItems": true
+        },
+        "calls": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "uniqueItems": true
+        },
+        "condition": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "startsSaga": {
+          "type": "boolean"
+        },
+        "correlation": {
+          "$ref": "#/$defs/sagaCorrelation"
+        },
+        "requestsTimeouts": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "uniqueItems": true
+        },
+        "completesSaga": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "message",
+        "correlation"
+      ]
+    },
+    "sagaTimeout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "outputs": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "uniqueItems": true
+        },
+        "calls": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "uniqueItems": true
+        },
+        "condition": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "stateType": {
+          "type": "string",
+          "maxLength": 512,
+          "minLength": 1,
+          "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+        },
+        "delay": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+        },
+        "schedule": {
+          "type": "string",
+          "maxLength": 2000,
+          "minLength": 1,
+          "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+        },
+        "requestsTimeouts": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96,
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          },
+          "uniqueItems": true
+        },
+        "completesSaga": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "stateType"
+      ]
+    },
+    "handler": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "implementation": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "handles": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/handlingRule"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "handles"
+      ]
+    },
+    "saga": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "implementation": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "dataType": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "correlationProperty": {
+          "type": "string",
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+        },
+        "whenNotFound": {
+          "enum": [
+            "Discard",
+            "Throw",
+            "Custom"
+          ]
+        },
+        "notFoundDescription": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "handles": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/sagaHandlingRule"
+          }
+        },
+        "timeouts": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/sagaTimeout"
+          }
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "processing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "framework": {
+          "const": "NServiceBus"
+        },
+        "endpoint": {
+          "type": "string",
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
+        },
+        "transport": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "persistence": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "sendOnly": {
+          "type": "boolean"
+        },
+        "outbox": {
+          "type": "boolean"
+        },
+        "recoverability": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "handlers": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/handler"
+          }
+        },
+        "sagas": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/saga"
+          }
+        }
+      },
+      "required": [
+        "framework",
+        "endpoint"
+      ]
     }
   }
 }

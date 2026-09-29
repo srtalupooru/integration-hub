@@ -1,0 +1,49 @@
+@if (Definition is not null)
+{
+    var p = Definition;
+    <div class="notice-strip"><MudIcon Icon="@HubIcons.LogicApp" /><p>Handlers and sagas belong to this component. Each rule shows the message it handles and what it may do next. This is declared behavior, not live execution.</p></div>
+    <details class="content-disclosure"><summary>Endpoint configuration · @p.Endpoint</summary><div class="detail-summary"><div><small>FRAMEWORK / ENDPOINT</small><strong>@p.Framework · @p.Endpoint</strong></div><div><small>TRANSPORT</small><strong>@ComponentVisuals.OrUnspecified(p.Transport)</strong></div><div><small>PERSISTENCE</small><strong>@ComponentVisuals.OrUnspecified(p.Persistence)</strong></div><div><small>OUTBOX</small><strong>@(p.Outbox is null ? "Not documented" : p.Outbox.Value ? "Declared enabled" : "Declared disabled")</strong></div></div>
+    @if (p.SendOnly) { <p>This endpoint is declared send-only.</p> }
+    @if (!string.IsNullOrWhiteSpace(p.Recoverability)) { <details class="quiet-details"><summary>Recoverability notes</summary><p>@p.Recoverability</p></details> }
+    </details>
+    <div class="section-stack mt-6">
+    @foreach (var handler in p.Handlers)
+    {
+        <article class="route-card">
+            <h2 class="section-title"><span class="section-symbol"><MudIcon Icon="@HubIcons.Code" /></span>@Name(handler.Name, handler.Id) <span class="badge">Handler</span></h2>
+            <details class="quiet-details"><summary>Handler implementation</summary><p>@handler.Id · @handler.Implementation</p></details>
+            @if (!string.IsNullOrWhiteSpace(handler.Description)) { <p>@handler.Description</p> }
+            @foreach (var rule in handler.Handles)
+            {
+                <section class="quiet-details"><h3>Handles <code>@rule.Message</code></h3><ProcessingEffectsView Effects="rule" /></section>
+            }
+        </article>
+    }
+    @foreach (var saga in p.Sagas)
+    {
+        <article class="route-card">
+            <h2 class="section-title"><span class="section-symbol compute"><MudIcon Icon="@HubIcons.LogicApp" /></span>@Name(saga.Name, saga.Id) <span class="badge">Stateful saga</span></h2>
+            <details class="quiet-details"><summary>Saga implementation</summary><p>@saga.Id · @saga.Implementation</p></details>
+            @if (!string.IsNullOrWhiteSpace(saga.Description)) { <p>@saga.Description</p> }
+            <dl class="technical-grid"><dt>State type</dt><dd>@ComponentVisuals.OrUnspecified(saga.DataType)</dd><dt>Correlation property</dt><dd>@ComponentVisuals.OrUnspecified(saga.CorrelationProperty ?? "")</dd><dt>When not found</dt><dd>@saga.WhenNotFound @saga.NotFoundDescription</dd></dl>
+            @foreach (var rule in saga.Handles)
+            {
+                <section class="quiet-details"><div class="route-line"><h3><code>@rule.Message</code></h3><span class="badge">@(rule.StartsSaga ? "Starts or continues" : "Continues existing instance")</span></div>
+                    @if (rule.Correlation is not null) { <p>Correlation: <strong>@rule.Correlation.Mode</strong> @rule.Correlation.MessageProperty @rule.Correlation.Header @rule.Correlation.Description</p> }
+                    <ProcessingEffectsView Effects="rule" RequestsTimeouts="rule.RequestsTimeouts" CompletesSaga="rule.CompletesSaga" />
+                </section>
+            }
+            @if (saga.Timeouts.Count > 0) { <h3 class="mt-6">Saga timeouts</h3><p>Callbacks for the same saga instance. A completed instance ignores outstanding timeouts; requesting another timeout does not cancel an earlier one.</p> }
+            @foreach (var timeout in saga.Timeouts)
+            {
+                <section class="quiet-details"><h3><code>@timeout.Id</code></h3><p>@timeout.StateType · @(timeout.Delay ?? timeout.Schedule ?? "Timing not documented")</p><ProcessingEffectsView Effects="timeout" RequestsTimeouts="timeout.RequestsTimeouts" CompletesSaga="timeout.CompletesSaga" /></section>
+            }
+        </article>
+    }
+    </div>
+    @if (p.Handlers.Count + p.Sagas.Count == 0 && !p.SendOnly) { <p>No handlers or sagas documented yet.</p> }
+}
+@code {
+    [Parameter] public ComponentProcessing? Definition { get; set; }
+    private static string Name(string name, string id) => string.IsNullOrWhiteSpace(name) ? id : name;
+}

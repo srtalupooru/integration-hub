@@ -1,0 +1,14 @@
+@if (References.Count > 0)
+{
+    <details class="quiet-details"><summary>@Label (@References.Count)</summary>
+        <ul>@foreach (var item in References) { <li><strong>@item.Name</strong> · @item.Kind · trigger <code>@item.Trigger</code>
+            @if (item.StartsSaga) { <span> · starts or continues saga</span> }
+            @if (item.CompletesSaga) { <span> · may complete saga</span> }
+            @if (!string.IsNullOrWhiteSpace(item.Condition)) { <p>@item.Condition</p> }
+        </li> }</ul>
+    </details>
+}
+@code {
+    [Parameter] public IReadOnlyList<ProcessingReference> References { get; set; } = [];
+    [Parameter] public string Label { get; set; } = "Declared processing";
+}

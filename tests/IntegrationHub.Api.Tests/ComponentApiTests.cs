@@ -20,6 +20,108 @@ public sealed class ComponentApiTests
         return (await response.Content.ReadFromJsonAsync<ComponentDetail>(HubJson.Options))!;
     }
     private async Task<DiscoveryResult> Discover() => (await _client.GetFromJsonAsync<DiscoveryResult>("/api/discovery", HubJson.Options))!;
+    [Test]
+    public async Task Saga_processing_survives_API_exports_edits_history_and_discovery()
+    {
+        await Add("saga-api"); var worker = await Add("saga-worker"); await Add("saga-payment-worker");
+        var flow = (await Discover()).Integrations.Single();
+        flow.Definition.Nodes.Should().HaveCount(3); flow.Connections.Should().HaveCount(3);
+        flow.Processing.Should().HaveCount(3);
+        var created = flow.Connections.Single(c => c.Contract == "invoice.created");
+        created.HandledBy.Should().HaveCount(2).And.Contain(r => r.Kind == "Saga" && r.StartsSaga)
+            .And.Contain(r => r.Kind == "Handler");
+        created.Delivery.Should().NotBe("Competing");
+        var command = flow.Connections.Single(c => c.Contract == "payment.request");
+        command.ProducedBy.Should().ContainSingle().Which.Trigger.Should().Be("on-invoice-created");
+        command.HandledBy.Should().ContainSingle().Which.Kind.Should().Be("Handler");
+        flow.Connections.Single(c => c.Contract == "payment.confirmed").HandledBy.Should()
+            .ContainSingle(r => r.CompletesSaga && !r.StartsSaga);
+        flow.Connections.Should().NotContain(c => c.ConsumeBindingId == "payment-deadline");
+        flow.HasCycle.Should().BeTrue();
+        (await Catalogue("?q=Finance.Sagas.InvoiceSaga")).Total.Should().Be(1);
+        (await _client.GetStringAsync($"/api/discovery/{flow.Id}/documentation?format=markdown"))
+            .Should().Contain("Handlers and sagas").And.Contain("InvoiceId").And.Contain("payment-deadline");
+        foreach (var format in new[] { "yaml", "json" })
+        {
+            var source = await _client.GetStringAsync($"/api/components/invoice-process-dev/definition?format={format}");
+            var parsed = new ComponentDefinitionParser(new()).Parse(new(source, format));
+            parsed.Validation.IsValid.Should().BeTrue();
+            parsed.Definition!.Processing.Should().BeEquivalentTo(worker.Definition.Processing);
+        }
+        var invalid = worker.OriginalDefinition.Replace("outputs: [request-payment]", "outputs: [on-invoice-created]");
+        (await _client.PutAsJsonAsync("/api/components/invoice-process-dev", new DefinitionRequest(invalid, ExpectedRevision: 1)))
+            .StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        var changed = worker.OriginalDefinition.Replace("outputs: [request-payment]", "outputs: []");
+        (await _client.PutAsJsonAsync("/api/components/invoice-process-dev", new DefinitionRequest(changed, ExpectedRevision: 1))).EnsureSuccessStatusCode();
+        var updated = (await Discover()).Integrations.Single();
+        updated.Id.Should().Be(flow.Id);
+        updated.Connections.Single(c => c.Contract == "payment.request").ProducedBy.Should().BeEmpty();
+        var versions = (await _client.GetFromJsonAsync<ComponentVersion[]>("/api/components/invoice-process-dev/versions", HubJson.Options))!;
+        versions.Should().HaveCount(2); versions.Last().OriginalDefinition.Should().Be(worker.OriginalDefinition);
+        (await _client.DeleteAsync("/api/components/invoice-process-dev?expectedRevision=2")).EnsureSuccessStatusCode();
+        (await Discover()).Integrations.Should().BeEmpty();
+        (await _client.PostAsync("/api/components/invoice-process-dev/restore?expectedRevision=3", null)).EnsureSuccessStatusCode();
+        (await Discover()).Integrations.Single().Processing.Single(p => p.ComponentId == "invoice-process-dev")
+            .Definition.Sagas.Should().ContainSingle();
+    }
+
+    [Test]
+    public async Task Unified_messages_keep_actions_in_API_and_exports_and_invalid_updates_do_not_change_history()
+    {
+        var original = await Add("vendor-command-function");
+        original.Definition.Messages.Select(m => m.Action).Should().Equal("consumes", "publishes");
+        var summary = (await _client.GetFromJsonAsync<ComponentSummary[]>("/api/components", HubJson.Options))!.Single();
+        summary.Consumes.Should().Be(1); summary.Publishes.Should().Be(1); summary.Sends.Should().Be(0);
+        var messages = (await _client.GetFromJsonAsync<ComponentMessageOccurrence[]>("/api/component-messages", HubJson.Options))!;
+        messages.Should().HaveCount(2).And.Contain(m => m.Binding.Action == "consumes" && m.Direction == "Consumes")
+            .And.Contain(m => m.Binding.Action == "publishes" && m.Direction == "Publishes event");
+        foreach (var format in new[] { "json", "yaml" })
+        {
+            var source = await _client.GetStringAsync($"/api/components/{original.Definition.Id}/definition?format={format}");
+            var parsed = new ComponentDefinitionParser(new()).Parse(new(source, format));
+            parsed.Validation.IsValid.Should().BeTrue();
+            parsed.Definition!.Messages.Should().BeEquivalentTo(original.Definition.Messages);
+            parsed.Definition.Consumes.Should().BeEmpty(); parsed.Definition.Publishes.Should().BeEmpty();
+        }
+        var invalid = original.OriginalDefinition.Replace("action: publishes", "action: sends");
+        (await _client.PutAsJsonAsync($"/api/components/{original.Definition.Id}", new DefinitionRequest(invalid, ExpectedRevision: 1))).StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        var current = (await _client.GetFromJsonAsync<ComponentDetail>($"/api/components/{original.Definition.Id}", HubJson.Options))!;
+        current.Revision.Should().Be(1); current.OriginalDefinition.Should().Be(original.OriginalDefinition);
+        (await _client.GetFromJsonAsync<ComponentVersion[]>($"/api/components/{original.Definition.Id}/versions", HubJson.Options))!.Should().ContainSingle();
+    }
+    [Test]
+    public async Task Multiple_technologies_survive_save_export_search_and_discovery()
+    {
+        var source = ComponentExamples.Read("vendor-api").Replace("    - ASP.NET Core", "    - ASP.NET Core\n    - FastEndpoints");
+        var response = await _client.PostAsJsonAsync("/api/components", new DefinitionRequest(source));
+        response.EnsureSuccessStatusCode();
+        var saved = (await response.Content.ReadFromJsonAsync<ComponentDetail>(HubJson.Options))!;
+        saved.Definition.Technology.Should().Equal("ASP.NET Core", "FastEndpoints");
+        var read = (await _client.GetFromJsonAsync<ComponentDetail>("/api/components/vendor-api-dev", HubJson.Options))!;
+        read.Definition.Technology.Should().Equal(saved.Definition.Technology);
+        (await _client.GetStringAsync("/api/components/vendor-api-dev/definition")).Should().Be(source);
+        var parser = new ComponentDefinitionParser(new());
+        foreach (var format in new[] { "yaml", "json" })
+        {
+            var export = await _client.GetStringAsync($"/api/components/vendor-api-dev/definition?format={format}");
+            parser.Parse(new(export, format)).Definition!.Technology.Should().Equal(saved.Definition.Technology);
+        }
+        await Add("vendor-function");
+        (await Catalogue("?technology=fastendpoints")).Total.Should().Be(1);
+        (await Catalogue("?q=FASTENDPOINTS")).Total.Should().Be(1);
+        (await Catalogue("?technology=unknown-stack")).Total.Should().Be(0);
+        var flow = (await Discover()).Integrations.Single();
+        flow.Definition.Nodes.Should().Contain(n => n.Technology == "ASP.NET Core, FastEndpoints");
+        var exportFlow = await _client.GetStringAsync($"/api/discovery/{flow.Id}/definition?format=yaml");
+        var validation = await _client.PostAsJsonAsync("/api/integrations/validate", new DefinitionRequest(exportFlow));
+        validation.EnsureSuccessStatusCode();
+        (await validation.Content.ReadFromJsonAsync<ValidationResult>(HubJson.Options))!.IsValid.Should().BeTrue();
+        var legacy = source.Replace("technology:\n    - ASP.NET Core\n    - FastEndpoints", "technology: ASP.NET Core");
+        (await _client.PutAsJsonAsync("/api/components/vendor-api-dev", new DefinitionRequest(legacy, ExpectedRevision: 1))).EnsureSuccessStatusCode();
+        (await Catalogue("?technology=fastendpoints")).Total.Should().Be(0);
+        var versions = (await _client.GetFromJsonAsync<ComponentVersion[]>("/api/components/vendor-api-dev/versions", HubJson.Options))!;
+        versions.Last().OriginalDefinition.Should().Be(source);
+    }
     private async Task<PagedResult<CatalogueEntry>> Catalogue(string query = "") =>
         (await _client.GetFromJsonAsync<PagedResult<CatalogueEntry>>("/api/catalogue" + query, HubJson.Options))!;
 

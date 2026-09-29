@@ -9,10 +9,13 @@ component:
   status: Development
   domain: Procurement
   owner: Integration team
-  technology: Azure Functions
+  technology:
+    - Azure Functions
   description: Consumes the creation command and publishes the completed event.
-  consumes:
+  # No completion-event consumer is included: an unconsumed finding is expected.
+  messages:
     - id: handle-create-vendor
+      action: consumes
       contract: vendors.create
       version: "1.0"
       messageType: Command
@@ -21,9 +24,8 @@ component:
         kind: Queue
         namespace: procurement-dev.servicebus.windows.net
         name: vendor-commands
-  # No completion-event consumer is included: an unconsumed finding is expected.
-  publishes:
     - id: vendor-created
+      action: publishes
       contract: vendors.command-created
       version: "1.0"
       messageType: Event

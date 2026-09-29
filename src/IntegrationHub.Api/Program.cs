@@ -27,6 +27,8 @@ builder.Services.AddAntiforgery(o => o.HeaderName = "X-CSRF-TOKEN");
 builder.Services.AddHealthChecks().AddCheck<HubReadinessCheck>("catalogue-storage", tags: ["ready"]);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(o => { o.SwaggerDoc("v1", new() { Title = "Integration Hub API", Version = "v1", Description = "Define once. Derive architecture, documentation, catalogues and impact analysis." }); });
+// Registers the framework file-version service used by the stylesheet links.
+builder.Services.AddMvcCore().AddRazorViewEngine();
 builder.Services.AddRazorComponents().AddInteractiveServerComponents(o => o.DetailedErrors = builder.Environment.IsDevelopment()).AddHubOptions(o => o.MaximumReceiveMessageSize = 8 * 1024 * 1024);
 builder.Services.AddMudServices();
 builder.Services.AddScoped<HubApiClient>();

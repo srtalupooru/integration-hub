@@ -4,6 +4,103 @@ Verified locally on 26 September 2026 with the .NET 8 SDK.
 
 ## Automated checks
 
+The minimal-theme update on 29 September 2026 passed all 72 API/rendering tests
+with no skipped tests. The web/API build succeeded and stylesheet content-hash
+checks passed. The workspace stylesheet now defines a light neutral sidebar,
+white content surfaces, smaller typography and icons, flat bordered cards, compact
+metrics, and restrained status accents. Decorative card stripes, hover lifts,
+large title icon backgrounds, and repeated workspace/footer text were removed.
+Navigation remains icons and labels; filtering, editing, exports, and discovery
+behavior are unchanged. Existing mobile menu, short-window scrolling, keyboard
+focus styles, and reduced-motion handling remain in place.
+
+The browser tool still failed during setup before a visual inspection was possible.
+Remaining visual checks: desktop and narrow layouts, long component names, focus
+and active states, all detail tabs, and graph controls. No browser screenshot or
+visual sign-off is claimed.
+
+The component-tile follow-up on 29 September 2026 passed all 72 API/rendering
+tests. Tiles now show only nonzero interaction counts with separate, spaced labels
+and singular/plural wording. An empty component has one concise placeholder.
+Stylesheet URLs now carry content hashes using the framework file-version service;
+the HTTP regression test verifies that both versioned URLs serve the current CSS
+and their versions equal the actual file hashes. Visual browser verification
+remains outstanding.
+
+The content-layout update was verified on 29 September 2026. The solution built
+with zero warnings/errors and all 71 API/rendering tests passed (none skipped).
+The new rendering tests cover populated, empty and failed component-message views,
+HTML encoding, preserved routing details, and the integration map/documentation
+shown on the default tab. Existing component, saga, catalogue, system and navigation
+rendering checks passed alongside the API workflows. The initial run exposed test
+harness setup errors (empty ParameterView and missing popover provider); those were
+corrected before the successful full API-suite rerun.
+
+The main pages now use shorter headings, explicit view switches, compact capability
+summaries, and expandable technical details. Component interactions separate
+incoming and outgoing work. Imported integration details have six tabs: Overview,
+Connections, Components, Messages, Operations, and Source & history. Discovered
+integrations use Overview for the graph and Review for matching findings. Definition
+formats, persistence, and discovery behavior are unchanged.
+
+Browser setup was attempted for this update but failed before connecting with
+`missing field sandboxPolicy`. No visual browser pass is claimed. Remaining smoke
+checks: navigate all six main pages; open the source selectors on Messages; inspect
+each integration tab and disclosure; check the graph after switching tabs; compare
+mobile and desktop layouts with long names; confirm that navigation still has only
+icons and labels.
+
+
+The NServiceBus processing update was verified on 27 September 2026: **305 .NET
+tests passed** (API/rendering 67, Application 74, Domain 15, Infrastructure 149),
+with none skipped. The full solution run passed 304 tests; the Application suite
+then passed all 74 tests after the final deterministic-discovery regression was
+added. The solution build completed with zero warnings and zero errors.
+
+New checks cover handler/saga references, wrong-direction bindings, duplicate IDs,
+send-only restrictions, Property/Header/Custom/SagaId correlation, multiple starters
+and processors, not-found policies, timeout schedules/cycles/reachability,
+completion warnings, rule limits, and JSON/YAML sample round trips. API tests
+verify processing evidence, search, Markdown, exports, rejected writes, edits,
+immutable history, archive/restore, and three routes rather than duplicate broker
+connections. SQLite reload preserves saga state-type declarations and timeout
+rules. HTML rendering checks cover local rules, conditions, and text encoding.
+
+No database migration is needed. Tests use isolated databases; no user catalogue
+was altered. This is declarative processing metadata, not runtime NServiceBus
+execution or instance telemetry. No live NServiceBus/SQL Server integration or
+visual browser verification is claimed. For a UI smoke test, import the three
+[saga examples](nservicebus-processing.md#try-the-complete-example), inspect
+**Handlers & sagas** in the component and generated integration, expand connection
+processing evidence, edit a rule, and check validation preview and revision history.
+
+
+The unified-message update was verified on 27 September 2026: all 270 .NET tests
+passed across API/rendering (65), Application (73), Domain (15) and Infrastructure
+(117). The first three suites passed in the solution run; the infrastructure suite
+passed on rerun after correcting a raw-string syntax error in a new test fixture.
+No tests were skipped. Coverage includes exact lowercase actions, action/type rules,
+required subscriptions, invalid mixed formats, duplicate IDs/routes, empty lists,
+size limits, YAML/JSON exports, old/new component matching, summary/catalogue counts,
+rendered action labels and HTML encoding, rejected updates preserving history, and
+legacy stored records. Existing API workflows exercise unified examples through
+discovery, graph/impact views, editing, archive/restore and persistence.
+
+Unified messages are supported by the current component schema with recommended
+`schemaVersion: "1.1"`; independent HTTP contract matching is still a proposal.
+Original sources are not rewritten and no migration is required. Live browser
+visual verification remains unavailable; the UI checks use the HTML renderer.
+
+The technology-list update was verified on 27 September 2026: all 237 .NET tests
+passed (API/rendering 63, Application 70, Domain 15, Infrastructure 89), with no
+skipped tests. New cases cover list and legacy scalar parsing, empty/default values,
+invalid entries and limits, JSON/YAML round trips, old stored canonical JSON,
+archive/restore with unchanged historical source/hash, API persistence, technology
+search, discovered snapshot validation and revision retention. Component details
+now render separate technology tags. Live visual verification remains unavailable.
+No database migration is required. The component detail API and formatted exports
+now return a technology array; existing definition strings remain readable.
+
 The workflow-card full-solution run passed all 210 .NET tests and 7 JavaScript tests, with no skipped tests. The 70 application tests were rerun successfully after the final word-wrapping and Unicode refinement. Both graph JavaScript modules pass Node syntax checks.
 
 | Suite | Passed | Failed |

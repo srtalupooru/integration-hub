@@ -2,8 +2,8 @@
 @page "/messages/{Name}"
 @inherits ApiPage
 <PageTitle>Messages &amp; events · Integration Hub</PageTitle>
-<div class="catalogue-modes"><strong>Authored integration messages</strong><a href="/component-messages">Component messages →</a></div>
-<div class="page-heading"><div><div class="eyebrow">MESSAGE CONTRACTS</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Forum" /></span><h1>@(Name ?? "Messages & events")</h1></div><p>Understand what is exchanged, who produces it, and who consumes it.</p></div></div>
+<nav class="catalogue-modes" aria-label="Message source"><a href="/component-messages">From components</a><strong aria-current="page">From imported integrations</strong></nav>
+<div class="page-heading"><div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Forum" /></span><h1>@(Name ?? "Messages & events")</h1></div><p>Understand what is exchanged, who produces it, and who consumes it.</p></div></div>
 <PageState Loading="Loading" Error="@Error" />
 @if (_selected is not null)
 {

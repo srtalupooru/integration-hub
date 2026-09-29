@@ -2,7 +2,7 @@
 @page "/systems/{Id}"
 @inherits ApiPage
 <PageTitle>Systems · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">SYSTEM CATALOGUE</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Dns" /></span><h1>@(_selected?.Name ?? "Systems")</h1></div><p>Business systems from component definitions and your enterprise registry.</p></div><div class="button-row">@if (Id is null && Api.CanEdit) { <MudButton Href="/components/new" StartIcon="@HubIcons.Add" Variant="Variant.Filled" Color="Color.Primary">Add system component</MudButton> }@if (Api.IsAdmin) { <MudButton OnClick="@(() => _editing = !_editing)" Variant="Variant.Outlined" Color="Color.Primary">@(_selected is null ? "Register system" : "Edit system")</MudButton> }</div></div>
+<div class="page-heading"><div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.Dns" /></span><h1>@(_selected?.Name ?? "Systems")</h1></div><p>Find business applications and open their connected integrations.</p></div><div class="button-row">@if (Id is null && Api.CanEdit) { <MudButton Href="/components/new" StartIcon="@HubIcons.Add" Variant="Variant.Filled" Color="Color.Primary">Add system</MudButton> }@if (Api.IsAdmin) { <MudButton OnClick="@(() => _editing = !_editing)" Variant="Variant.Outlined" Color="Color.Primary">@(_selected is null ? "Register system" : "Edit system")</MudButton> }</div></div>
 <PageState Loading="Loading" Error="@Error" />
 @if (_editing && Api.IsAdmin)
 {
@@ -14,7 +14,7 @@
 }
 else if (!Loading && Error is null && Id is null)
 {
-    <div class="notice-strip"><MudIcon Icon="@HubIcons.InternalSystem" /><p>System components use type <code>InternalSystem</code>, <code>ExternalSystem</code>, or <code>SaaS</code> and appear here automatically when saved. APIs, functions, and other technical services are in <a href="/components">Components</a>.</p></div>
+    <details class="quiet-details page-help"><summary>Which systems appear here?</summary><p>System components use type <code>InternalSystem</code>, <code>ExternalSystem</code>, or <code>SaaS</code> and appear here automatically when saved. APIs, functions, and other technical services are in <a href="/components">Components</a>.</p></details>
     @if (_systems.Count == 0 && _systemComponents.Count == 0)
     {
         <div class="panel empty-state"><MudIcon Icon="@HubIcons.Dns" Size="Size.Large" /><h2>No systems yet</h2><p>Add a system component to describe the business application calling your API. Under Add component, open Start from a sample definition and choose Caller example. Administrators can also register a system for authored integration nodes.</p><MudButton Href="/components" Variant="Variant.Outlined" Color="Color.Primary">Browse components</MudButton></div>
@@ -22,12 +22,12 @@ else if (!Loading && Error is null && Id is null)
     @if (_systemComponents.Count > 0)
     {
         <section class="section-stack mb-6" aria-label="System components">
-            <div class="section-heading"><div><h2>System components</h2><p>From saved definitions. Open a system to review its calls, messages, and connected integrations.</p></div><span class="count-pill">@_systemComponents.Count</span></div>
+            <div class="section-heading"><div><h2>System components</h2><p>Open a system to see its calls, messages, and integrations.</p></div><span class="count-pill">@_systemComponents.Count</span></div>
             <div class="catalogue-grid">@foreach (var system in _systemComponents)
             {
                 <a href="@($"/components/{Uri.EscapeDataString(system.Id)}")" class="integration-card component-card system">
                     <div class="card-top"><div class="component-identity"><span class="type-icon system"><MudIcon Icon="@ComponentVisuals.Icon(system.Type)" /></span><div><h2>@system.Name</h2><small>@ComponentVisuals.Label(system.Type)</small></div></div><StatusBadge Status="@system.Status" /></div>
-                    <div class="card-meta"><span>@system.Environment</span><span>@system.Id</span><span>Component definition</span></div>
+                    <div class="card-meta"><span>@system.Environment</span></div>
                     <div class="card-bottom"><span class="card-owner"><MudIcon Icon="@HubIcons.Person" />@ComponentVisuals.OrUnspecified(system.Owner)</span><span class="card-open" aria-label="View system component"><MudIcon Icon="@HubIcons.ArrowRight" /></span></div>
                 </a>
             }</div>
@@ -36,7 +36,7 @@ else if (!Loading && Error is null && Id is null)
     @if (_systems.Count > 0)
     {
         <section class="section-stack" aria-label="Registered systems">
-            <div class="section-heading"><div><h2>Registered systems</h2><p>Managed by administrators and referenced by system ID in authored integrations. Registry entries and component definitions have separate identities.</p></div><span class="count-pill">@_systems.Count</span></div>
+            <div class="section-heading"><div><h2>Registered systems</h2><p>Enterprise registry entries used by imported integration definitions.</p></div><span class="count-pill">@_systems.Count</span></div>
             <div class="catalogue-grid">@foreach (var system in _systems) { <a href="@($"/systems/{Uri.EscapeDataString(system.Id)}")" class="integration-card"><span class="integration-icon"><MudIcon Icon="@HubIcons.Dns" /></span><h2>@system.Name</h2><p>@system.Description</p><div class="card-meta"><span>@system.Type</span><span>@system.BusinessDomain</span><span>Registry entry</span></div><div class="card-bottom"><span>@system.Owner</span><span>@system.Criticality</span></div></a> }</div>
         </section>
     }
