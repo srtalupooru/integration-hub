@@ -32,3 +32,5 @@ public sealed record ComponentPreview(ComponentDefinition? Definition, string Fo
     DiscoveryResult? Discovery, IReadOnlyList<string> RemovedIntegrationIds, IReadOnlyList<string> AddedIntegrationIds);
 public sealed record ComponentMessageOccurrence(string ComponentId, string ComponentName, string Environment, string Direction, MessageBinding Binding);
 public sealed record ComponentDashboard(int Components, int Networks, int Unlinked, int Findings);
+
+public sealed record ComponentDefinitionConversion(string? Definition, string Format, ValidationResult Validation);

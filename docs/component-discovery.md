@@ -2,6 +2,11 @@
 
 ## What you can do
 
+Use **Components → Add component → Form** to enter definitions without writing
+YAML or JSON. The **Definition** editor remains available alongside it. Both use
+the same validation, connection preview, and save workflow. See the
+[component authoring guide](component-form.md) for instructions and conversion behavior.
+
 Define each API, function, service or calling system independently. HTTP and messaging have separate declarations: `endpoints` exposes HTTP operations, `calls` references API endpoints, `messages` declares broker interactions using `action: sends` for commands, `action: publishes` for events, and `action: consumes` for subscriptions. An API can expose endpoints and send commands or publish events without consuming any broker messages. Integration Hub resolves both interaction types into read-only networks, diagrams, documentation and dependency impact.
 
 For example:

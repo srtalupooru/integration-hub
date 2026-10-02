@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 using IntegrationHub.Contracts;
 using IntegrationHub.Domain;
 using IntegrationHub.Infrastructure.Parsing;
 using IntegrationHub.Tests;
+using IntegrationHub.Web;
 namespace IntegrationHub.Api.Tests;
 
 [TestFixture]
@@ -20,6 +22,68 @@ public sealed class ComponentApiTests
         return (await response.Content.ReadFromJsonAsync<ComponentDetail>(HubJson.Options))!;
     }
     private async Task<DiscoveryResult> Discover() => (await _client.GetFromJsonAsync<DiscoveryResult>("/api/discovery", HubJson.Options))!;
+    [Test]
+    public async Task Form_draft_can_be_previewed_saved_converted_and_edited_with_revision_protection()
+    {
+        var document = ComponentFormSchema.NewDocument();
+        var component = document["component"]!.AsObject();
+        component["id"] = "form-api"; component["name"] = "Invoice API";
+        component["technology"] = new JsonArray("ASP.NET Core", "NServiceBus");
+        component["endpoints"] = JsonNode.Parse("""[{"id":"create","method":"POST","path":"/invoices","version":"1.0"}]""");
+        var source = ComponentFormSchema.Serialize(document);
+        var previewResponse = await _client.PostAsJsonAsync("/api/components/preview", new DefinitionRequest(source));
+        previewResponse.EnsureSuccessStatusCode();
+        (await previewResponse.Content.ReadFromJsonAsync<ComponentPreview>(HubJson.Options))!.Validation.IsValid.Should().BeTrue();
+        (await _client.GetFromJsonAsync<ComponentSummary[]>("/api/components", HubJson.Options))!.Should().BeEmpty();
+        var create = await _client.PostAsJsonAsync("/api/components", new DefinitionRequest(source, ChangeSummary: "Added using form"));
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var saved = (await create.Content.ReadFromJsonAsync<ComponentDetail>(HubJson.Options))!;
+        saved.Revision.Should().Be(1); saved.Definition.Technology.Should().HaveCount(2);
+        var yaml = await _client.GetStringAsync("/api/components/form-api/definition?format=yaml");
+        var conversion = await _client.PostAsJsonAsync("/api/components/convert", new DefinitionRequest(yaml));
+        var result = (await conversion.Content.ReadFromJsonAsync<ComponentDefinitionConversion>(HubJson.Options))!;
+        var edited = JsonNode.Parse(result.Definition!)!.AsObject(); edited["component"]!["owner"] = "Finance team";
+        var request = new DefinitionRequest(ComponentFormSchema.Serialize(edited), ChangeSummary: "Added owner", ExpectedRevision: 1);
+        var update = await _client.PutAsJsonAsync("/api/components/form-api", request);
+        update.EnsureSuccessStatusCode();
+        (await update.Content.ReadFromJsonAsync<ComponentDetail>(HubJson.Options))!.Definition.Should().BeEquivalentTo(saved.Definition with { Owner = "Finance team" });
+        (await _client.PutAsJsonAsync("/api/components/form-api", request)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var versions = (await _client.GetFromJsonAsync<ComponentVersion[]>("/api/components/form-api/versions", HubJson.Options))!;
+        versions.Should().HaveCount(2).And.Contain(v => v.ChangeSummary == "Added using form" && v.OriginalDefinition == source);
+    }
+
+    [Test]
+    public async Task Form_conversion_is_read_only_preserves_processing_and_allows_semantic_repairs()
+    {
+        var source = ComponentExamples.Read("saga-worker");
+        foreach (var format in new[] { "json", "yaml" })
+        {
+            var response = await _client.PostAsJsonAsync("/api/components/convert?format=" + format, new DefinitionRequest(source));
+            response.EnsureSuccessStatusCode();
+            var result = (await response.Content.ReadFromJsonAsync<ComponentDefinitionConversion>(HubJson.Options))!;
+            result.Validation.IsValid.Should().BeTrue(); result.Format.Should().Be(format);
+            var parser = new ComponentDefinitionParser(new());
+            parser.Parse(new(result.Definition!, format)).Definition.Should().BeEquivalentTo(parser.Parse(new(source)).Definition);
+        }
+        (await _client.GetFromJsonAsync<ComponentSummary[]>("/api/components", HubJson.Options))!.Should().BeEmpty();
+        var invalidReference = source.Replace("outputs: [request-payment]", "outputs: [missing-message]");
+        var repair = await _client.PostAsJsonAsync("/api/components/convert", new DefinitionRequest(invalidReference));
+        var draft = (await repair.Content.ReadFromJsonAsync<ComponentDefinitionConversion>(HubJson.Options))!;
+        draft.Definition.Should().NotBeNull(); draft.Validation.IsValid.Should().BeFalse();
+        (await _client.PostAsJsonAsync("/api/components", new DefinitionRequest(draft.Definition!))).StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        foreach (var invalid in new[] { "component: [", source.Replace("  processing:", "  unsupported:") })
+        {
+            var response = await _client.PostAsJsonAsync("/api/components/convert", new DefinitionRequest(invalid));
+            var result = (await response.Content.ReadFromJsonAsync<ComponentDefinitionConversion>(HubJson.Options))!;
+            result.Definition.Should().BeNull(); result.Validation.IsValid.Should().BeFalse();
+        }
+        (await _client.PostAsJsonAsync("/api/components/convert?format=xml", new DefinitionRequest(source))).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var viewerFactory = new HubFactory("Viewer"); using var viewer = await viewerFactory.CreateReadyClient();
+        (await viewer.PostAsJsonAsync("/api/components/convert", new DefinitionRequest(source))).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        _client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
+        (await _client.PostAsJsonAsync("/api/components/convert", new DefinitionRequest(source))).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     [Test]
     public async Task Saga_processing_survives_API_exports_edits_history_and_discovery()
     {

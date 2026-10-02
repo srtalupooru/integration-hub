@@ -32,6 +32,15 @@ public static class ComponentEndpoints
             var component = await repository.GetAsync(id, ct) ?? throw new NotFoundException("Component was not found.");
             return Results.Text(format is null ? component.OriginalDefinition : serializer.Serialize(component.Definition, format), format == "json" ? "application/json" : "text/plain");
         });
+        api.MapPost("/components/convert", (DefinitionRequest request, string? format, IComponentDefinitionParser parser, IComponentDefinitionSerializer serializer) =>
+        {
+            var output = format ?? "json";
+            if (output is not ("json" or "yaml")) throw new ArgumentException("Format must be json or yaml.");
+            var parsed = parser.Parse(request);
+            // Schema-valid drafts may still have unresolved references or semantic errors.
+            // Return those issues with the conversion so they can be repaired in the form.
+            return new ComponentDefinitionConversion(parsed.Definition is null ? null : serializer.Serialize(parsed.Definition, output), output, parsed.Validation);
+        }).RequireAuthorization("Editor").WithSummary("Convert a component for the form/source editor without saving it.");
         api.MapPost("/components/validate", (DefinitionRequest request, IComponentDefinitionParser parser) => parser.Parse(request).Validation).RequireAuthorization("Editor");
         api.MapPost("/components/preview", (DefinitionRequest request, ComponentWorkflow workflow, CancellationToken ct) => workflow.PreviewAsync(request, ct)).RequireAuthorization("Editor")
             .WithSummary("Validate a component and preview the recomputed catalogue, including network merges/splits, without saving.");

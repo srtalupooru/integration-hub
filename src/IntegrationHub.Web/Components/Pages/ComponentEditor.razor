@@ -1,3 +1,4 @@
+@using System.Text.Json.Nodes
 @page "/components/new"
 @page "/components/{Id}/edit"
 @inherits ApiPage
@@ -5,27 +6,43 @@
 <a class="breadcrumb" href="/components">← Components</a>
 <PageTitle>Component definition · Integration Hub</PageTitle>
 <div class="page-heading"><div><div class="eyebrow">COMPONENT DEFINITION</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.File" /></span><h1>@(Id is null ? "Add a component" : "Edit component")</h1></div><p>Describe one API, function, or system. Check its connections, then save it to your catalogue.</p></div><a href="/api/component-schema" target="_blank">Component schema ↗</a></div>
+<NavigationLock ConfirmExternalNavigation="@IsDirty" OnBeforeInternalNavigation="BeforeNavigation" />
 <PageState Loading="Loading" Error="@Error" />
+@if (_pendingTarget is not null) { <div class="notice-strip"><div><p>You have unsaved changes. Leave this page and discard them?</p><div class="button-row"><MudButton OnClick="Leave">Discard and leave</MudButton><MudButton OnClick="@(() => _pendingTarget = null)" Color="Color.Primary">Keep editing</MudButton></div></div></div> }
 @if (!Loading && !Api.CanEdit) { <MudAlert Severity="Severity.Info">An Editor or Admin role is required to save component definitions.</MudAlert> }
 else
 {
-    <ol class="editor-progress" aria-label="Authoring steps"><li><span>1</span> Write or upload</li><li><span>2</span> Validate &amp; review</li><li><span>3</span> Save component</li></ol>
+    <ol class="editor-progress" aria-label="Authoring steps"><li><span>1</span> Fill in or paste</li><li><span>2</span> Validate &amp; review</li><li><span>3</span> Save component</li></ol>
     <div class="editor-grid"><section class="panel editor-panel">
-        <h2>Component definition</h2>
+        <fieldset class="editor-fieldset" disabled="@Loading">
+        <div class="editor-mode-switch" role="group" aria-label="Editing mode"><button type="button" aria-pressed="@(_formMode ? "true" : "false")" @onclick="ShowForm">Form</button><button type="button" aria-pressed="@(!_formMode ? "true" : "false")" @onclick="@(() => _formMode = false)">Definition</button></div>
+        @if (_conversionIssues is not null) { <p class="content-footnote">The source could not be converted. Correct the schema errors below; your text has been kept.</p><ValidationView Result="_conversionIssues" /> }
         <details class="quiet-details"><summary>Definition structure</summary><p>Declare broker interactions in <code>messages</code> with <code>action: publishes</code> for events, <code>action: sends</code> for commands, or <code>action: consumes</code> for incoming messages. Use <code>endpoints</code> and <code>calls</code> for HTTP.</p></details>
         @if (Id is null) { <details class="quiet-details"><summary>Start from a sample definition</summary><div class="button-row"><MudButton OnClick="@(() => Example("vendor-system"))">Caller example</MudButton><MudButton OnClick="@(() => Example("vendor-api"))">API example</MudButton><MudButton OnClick="@(() => Example("vendor-function"))">Function example</MudButton><MudButton OnClick="@(() => Example("elite-api"))">Receiver example</MudButton><MudButton OnClick="@(() => Example("vendor-command-api"))">Command API example</MudButton><MudButton OnClick="@(() => Example("vendor-command-function"))">Command worker example</MudButton><MudButton OnClick="@(() => Example("saga-api"))">Saga API example</MudButton><MudButton OnClick="@(() => Example("saga-worker"))">Function App with saga</MudButton><MudButton OnClick="@(() => Example("saga-payment-worker"))">Saga payment worker</MudButton></div><p class="muted">Example buttons replace the editor text. Edit the examples to match your own contracts and channels.</p></details> }
         <label class="upload-label">Choose JSON or YAML <InputFile OnChange="Upload" accept=".json,.yaml,.yml" /></label>
+        @if (_formMode && _document is not null && _schema is not null)
+        {
+            <ComponentDefinitionForm Schema="_schema" Document="_document" LockId="@(Id is not null)" Changed="FormChanged" />
+            <p class="content-footnote">Form edits generate JSON. Editing an imported definition preserves supported fields, but normalizes formatting and removes YAML comments when a form field is changed.</p>
+        }
+        else if (_formMode) { <p class="content-footnote">Loading the component form…</p> }
+        else
+        {
+            <div class="button-row"><MudButton OnClick="@(() => ConvertSource("json"))">Format as JSON</MudButton><MudButton OnClick="@(() => ConvertSource("yaml"))">Format as YAML</MudButton></div>
         <label for="component-source" class="sr-only">Component definition</label><textarea id="component-source" class="source-editor" value="@_source" @oninput="Changed" spellcheck="false" placeholder="component:&#10;  id: vendor-api-dev&#10;  ..."></textarea>
         <details class="quiet-details"><summary>YAML formatting help</summary><p>Indent fields beneath <code>component:</code> with two spaces. Indent list fields beneath their item. HTTP paths start with <code>/</code>; contract names use lowercase, such as <code>invoice.created</code>.</p><pre>component:
   id: invoice-api
   name: Invoice API
   type: Api
   environment: development</pre></details>
+        }
         <MudTextField @bind-Value="_summary" Label="Change summary (optional)" Class="mt-4" Variant="Variant.Outlined" />
         <div class="editor-actions"><MudButton OnClick="Preview" StartIcon="@HubIcons.FactCheck" Disabled="@(Loading || string.IsNullOrWhiteSpace(_source))" Variant="Variant.Outlined" Color="Color.Primary">Validate &amp; preview links</MudButton><MudButton OnClick="Save" StartIcon="@HubIcons.Save" Disabled="@(Loading || _preview?.Validation.IsValid != true || _validated != _source)" Variant="Variant.Filled" Color="Color.Primary">Save component</MudButton></div>
         <p class="muted">@(_revision is null ? "Nothing is stored until you save." : $"Editing revision {_revision}. A stale revision cannot overwrite another author's changes.") Unresolved messages can be saved; add the other components later.</p>
+        </fieldset>
     </section><section class="panel preview-panel">
         <h2>Review your component</h2>
+        @if (_formMode) { <details class="quiet-details"><summary>Generated definition</summary><pre class="definition-code">@_source</pre></details> }
         @if (_preview is null) { <div class="preview-empty"><MudIcon Icon="@HubIcons.AccountTree" /><h3>See how it connects</h3><p>Choose Validate &amp; preview links to check your definition and find matching components.</p></div> }
         else
         {
@@ -44,23 +61,66 @@ else
 }
 @code {
     [Parameter] public string? Id { get; set; }
-    private string _source = "", _summary = "", _validated = "";
+    private string _source = "", _summary = "", _validated = "", _savedSource = "";
+    private string? _formSource, _pendingTarget;
+    private bool _formMode = true;
+    private JsonObject? _document, _schema;
+    private ValidationResult? _conversionIssues;
     private int? _revision;
     private ComponentPreview? _preview;
+    private bool IsDirty => _source != _savedSource || !string.IsNullOrWhiteSpace(_summary);
     protected override async Task LoadAsync()
     {
-        _preview = null; _revision = null; _source = ""; _summary = "";
-        if (Id is null) return;
-        var detail = await Api.GetAsync<ComponentDetail>($"/api/components/{Uri.EscapeDataString(Id)}");
-        if (detail.IsArchived) { Navigation.NavigateTo($"/components/{Id}"); return; }
-        _source = detail.OriginalDefinition; _revision = detail.Revision;
+        _preview = null; _revision = null; _source = ""; _summary = ""; _validated = ""; _savedSource = ""; _pendingTarget = null;
+        _document = null; _formSource = null; _conversionIssues = null; _formMode = true;
+        _schema ??= JsonNode.Parse(await Api.GetAsync<string>("/api/component-schema"))!.AsObject();
+        if (Id is null)
+        {
+            _document = ComponentFormSchema.NewDocument();
+            _source = ComponentFormSchema.Serialize(_document);
+        }
+        else
+        {
+            var detail = await Api.GetAsync<ComponentDetail>($"/api/components/{Uri.EscapeDataString(Id)}");
+            if (detail.IsArchived) { Navigation.NavigateTo($"/components/{Id}"); return; }
+            _source = detail.OriginalDefinition; _revision = detail.Revision;
+            var json = await Api.GetAsync<string>($"/api/components/{Uri.EscapeDataString(Id)}/definition?format=json");
+            _document = JsonNode.Parse(json)!.AsObject();
+        }
+        _savedSource = _formSource = _source;
     }
-    private void Changed(ChangeEventArgs e) { _source = e.Value?.ToString() ?? ""; _preview = null; }
-    private Task Example(string name) => ExecuteAsync(async () => { _source = await Api.GetAsync<string>($"/api/component-examples/{name}"); _preview = null; });
+    private void SetSource(string value) { _source = value; _preview = null; _validated = ""; _conversionIssues = null; }
+    private void Changed(ChangeEventArgs e) => SetSource(e.Value?.ToString() ?? "");
+    private void FormChanged()
+    {
+        SetSource(ComponentFormSchema.Serialize(_document!));
+        _formSource = _source;
+    }
+    private Task ShowForm() => ExecuteAsync(OpenForm);
+    private async Task OpenForm()
+    {
+        if (_document is not null && _formSource == _source) { _formMode = true; return; }
+        var source = _source;
+        var result = await Api.SendAsync<ComponentDefinitionConversion>("POST", "/api/components/convert?format=json", new DefinitionRequest(source));
+        if (_source != source) return;
+        if (result.Definition is null) { _conversionIssues = result.Validation; _formMode = false; return; }
+        _schema ??= JsonNode.Parse(await Api.GetAsync<string>("/api/component-schema"))!.AsObject();
+        _document = JsonNode.Parse(result.Definition)!.AsObject();
+        _formSource = source; _formMode = true; _conversionIssues = null;
+    }
+    private Task ConvertSource(string format) => ExecuteAsync(async () =>
+    {
+        var source = _source;
+        var result = await Api.SendAsync<ComponentDefinitionConversion>("POST", "/api/components/convert?format=" + format, new DefinitionRequest(source));
+        if (_source != source) return;
+        if (result.Definition is null) { _conversionIssues = result.Validation; return; }
+        SetSource(result.Definition);
+    });
+    private Task Example(string name) => ExecuteAsync(async () => { SetSource(await Api.GetAsync<string>($"/api/component-examples/{name}")); await OpenForm(); });
     private Task Upload(InputFileChangeEventArgs e) => ExecuteAsync(async () =>
     {
         if (e.File.Size > 1_000_000 || !new[] { ".json", ".yaml", ".yml" }.Contains(Path.GetExtension(e.File.Name).ToLowerInvariant())) { Error = "Choose a JSON/YAML file smaller than 1 MB."; return; }
-        using var reader = new StreamReader(e.File.OpenReadStream(1_000_000)); _source = await reader.ReadToEndAsync(); _preview = null;
+        using var reader = new StreamReader(e.File.OpenReadStream(1_000_000)); SetSource(await reader.ReadToEndAsync()); await OpenForm();
     });
     private Task Preview() => ExecuteAsync(async () =>
     {
@@ -71,7 +131,15 @@ else
     private Task Save() => ExecuteAsync(async () =>
     {
         if (_preview?.Validation.IsValid != true || _validated != _source) return;
-        var saved = await Api.SendAsync<ComponentDetail>(Id is null ? "POST" : "PUT", Id is null ? "/api/components" : $"/api/components/{Uri.EscapeDataString(Id)}", new DefinitionRequest(_source, ChangeSummary: _summary, ExpectedRevision: _revision));
+        var source = _source;
+        var saved = await Api.SendAsync<ComponentDetail>(Id is null ? "POST" : "PUT", Id is null ? "/api/components" : $"/api/components/{Id}", new DefinitionRequest(source, ChangeSummary: _summary, ExpectedRevision: _revision));
+        _savedSource = source; _summary = "";
         Navigation.NavigateTo($"/components/{saved.Definition.Id}");
     });
+    private Task BeforeNavigation(LocationChangingContext context)
+    {
+        if (IsDirty) { context.PreventNavigation(); _pendingTarget = context.TargetLocation; StateHasChanged(); }
+        return Task.CompletedTask;
+    }
+    private void Leave() { var target = _pendingTarget; _pendingTarget = null; _savedSource = _source; _summary = ""; if (target is not null) Navigation.NavigateTo(target); }
 }

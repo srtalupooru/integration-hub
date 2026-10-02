@@ -4,6 +4,22 @@ Verified locally on 26 September 2026 with the .NET 8 SDK.
 
 ## Automated checks
 
+The component form update on 30 September 2026 passed **325 tests** with none
+skipped: the full solution run passed 323 (API/rendering 85, Application 74,
+Domain 15, Infrastructure 149), followed by two new editor-initialization rendering
+tests. Builds emitted no warnings or errors.
+
+New checks cover schema-driven field creation, conditional requirements,
+preservation of legacy bindings and handler/saga data, HTML encoding, and loading
+the form for new and existing components. API checks cover read-only JSON/YAML
+conversion, invalid source, authorization and CSRF, plus form-generated drafts
+through preview, save, export, edit, revision history, and stale-revision rejection.
+
+Live browser verification remains outstanding because the browser tool failed
+during setup (`missing field sandboxPolicy`). Remaining manual checks: switch
+between Form and Definition, add/remove nested messages and saga rules, validate
+and save, test unsaved-navigation prompts, and inspect desktop/mobile layout.
+
 The minimal-theme update on 29 September 2026 passed all 72 API/rendering tests
 with no skipped tests. The web/API build succeeded and stylesheet content-hash
 checks passed. The workspace stylesheet now defines a light neutral sidebar,

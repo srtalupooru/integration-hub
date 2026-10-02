@@ -1,0 +1,98 @@
+@using System.Text.Json.Nodes
+@if (Kind == "array")
+{
+    <section class="form-collection">
+        <div class="section-heading"><div><h3>@Label <span class="count-pill">@Items.Count</span></h3>@if (Help.Length > 0) { <p>@Help</p> }</div><button type="button" class="form-button" @onclick="Add" disabled="@(Items.Count >= Limit)">+ Add</button></div>
+        @if (Items.Count == 0) { <p class="content-footnote">No @Label.ToLowerInvariant() added. Use Add when needed.</p> }
+        @for (var i = 0; i < Items.Count; i++)
+        {
+            var index = i;
+            if (Items[i] is JsonObject item)
+            {
+                <details class="form-entry" @key="item" open>
+                    <summary>@ComponentFormSchema.ItemTitle(item, index)</summary>
+                    <SchemaFields Root="Root" Schema="ItemSchema" Value="item" Path="@(Path + "/" + index)" LockId="LockId" Changed="Changed" />
+                    <button type="button" class="form-remove" @onclick="@(() => Remove(index))">Remove @ComponentFormSchema.ItemTitle(item, index)</button>
+                </details>
+            }
+            else
+            {
+                <div class="form-list-item"><label class="sr-only" for="@(InputId + "-" + index)">@Label item @(index + 1)</label><input id="@(InputId + "-" + index)" value="@ComponentFormSchema.Text(Items[i])" maxlength="@ItemSchema["maxLength"]" @oninput="@(e => SetItem(index, e.Value?.ToString() ?? ""))" /><button type="button" class="form-remove" aria-label="@($"Remove {Label} item {index + 1}")" @onclick="@(() => Remove(index))">Remove</button></div>
+            }
+        }
+    </section>
+}
+else if (Kind == "object")
+{
+    <section class="form-collection">
+    @if (Parent[Name] is JsonObject value)
+    {
+        <details class="form-entry" open><summary>@Label @if (Required) { <span class="required-mark">*</span> }</summary>
+            <SchemaFields Root="Root" Schema="Resolved" Value="value" Path="@Path" LockId="LockId" Changed="Changed" />
+            @if (!Required) { <button type="button" class="form-remove" @onclick="RemoveObject">Remove @Label.ToLowerInvariant()</button> }
+        </details>
+    }
+    else { <button type="button" class="form-button" @onclick="AddObject">+ Add @Label.ToLowerInvariant()</button> }
+    </section>
+}
+else
+{
+    <div class="form-field @(IsMultiline ? "form-wide" : "")">
+        <label for="@InputId">@Label @if (Required) { <span class="required-mark" aria-label="required">*</span> } else { <small>optional</small> }</label>
+        @if (Kind == "boolean")
+        {
+            <select id="@InputId" value="@Value" @onchange="SetValue" aria-describedby="@HelpId"><option value="">Not specified</option><option value="true">Yes</option><option value="false">No</option></select>
+        }
+        else if (Options.Count > 0)
+        {
+            <select id="@InputId" value="@Value" @onchange="SetValue" disabled="@(Resolved.ContainsKey("const") || FixedMessageType)" aria-required="@Required" aria-describedby="@HelpId">
+                <option value="">@(Required ? "Choose…" : "Not specified")</option>
+                @foreach (var option in Options) { <option value="@option">@(Name == "type" ? ComponentVisuals.Label(option) : option)</option> }
+            </select>
+        }
+        else if (IsMultiline)
+        {
+            <textarea id="@InputId" rows="3" value="@Value" @oninput="SetValue" maxlength="@Resolved["maxLength"]" aria-required="@Required" aria-describedby="@HelpId"></textarea>
+        }
+        else
+        {
+            <input id="@InputId" type="text" value="@Value" @oninput="SetValue" disabled="@(LockId && Path == "/component/id")" maxlength="@Resolved["maxLength"]" aria-required="@Required" aria-describedby="@HelpId" />
+        }
+        @if (Help.Length > 0) { <small id="@HelpId" class="form-help">@Help</small> }
+    </div>
+}
+@code {
+    [Parameter, EditorRequired] public JsonObject Root { get; set; } = new();
+    [Parameter, EditorRequired] public JsonObject Parent { get; set; } = new();
+    [Parameter, EditorRequired] public JsonObject Schema { get; set; } = new();
+    [Parameter] public string Name { get; set; } = "";
+    [Parameter] public string Path { get; set; } = "";
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool LockId { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private JsonObject Resolved => ComponentFormSchema.Resolve(Root, Schema);
+    private string Kind => ComponentFormSchema.Kind(Resolved);
+    private string Label => ComponentFormSchema.Label(Name);
+    private string Help => ComponentFormSchema.Help(Name);
+    private string InputId => "field" + Path.Replace('/', '-');
+    private string? HelpId => Help.Length > 0 ? InputId + "-help" : null;
+    private string Value => ComponentFormSchema.Text(Parent[Name] ?? Resolved["const"]);
+    private JsonArray Items => Parent[Name] as JsonArray ?? new JsonArray();
+    private int Limit => Resolved["maxItems"]?.GetValue<int>() ?? 100;
+    private JsonObject ItemSchema => ComponentFormSchema.Resolve(Root, Resolved["items"]!.AsObject());
+    private bool IsMultiline => Name is "description" or "condition" or "recoverability" or "notFoundDescription" or "schedule";
+    private bool FixedMessageType => Name == "messageType" && ComponentFormSchema.Text(Parent["action"]) is "publishes" or "sends";
+    private IReadOnlyList<string> Options => Resolved["enum"] is JsonArray options ? options.Select(ComponentFormSchema.Text).ToArray() : Resolved["const"] is JsonNode constant ? [ComponentFormSchema.Text(constant)] : [];
+    private Task SetValue(ChangeEventArgs e) { ComponentFormSchema.Set(Parent, Name, e.Value?.ToString() ?? "", Resolved, Required); return Changed.InvokeAsync(); }
+    private Task SetItem(int index, string value) { Items[index] = value; return Changed.InvokeAsync(); }
+    private Task Add()
+    {
+        if (Items.Count >= Limit) return Task.CompletedTask;
+        if (Parent[Name] is not JsonArray) Parent[Name] = new JsonArray();
+        Parent[Name]!.AsArray().Add(ComponentFormSchema.Create(Root, ItemSchema));
+        return Changed.InvokeAsync();
+    }
+    private Task Remove(int index) { Items.RemoveAt(index); return Changed.InvokeAsync(); }
+    private Task AddObject() { Parent[Name] = ComponentFormSchema.Create(Root, Resolved); return Changed.InvokeAsync(); }
+    private Task RemoveObject() { Parent.Remove(Name); return Changed.InvokeAsync(); }
+}

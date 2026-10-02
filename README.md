@@ -8,6 +8,8 @@ You can also author **independent component definitions**: systems `call` expose
 
 NServiceBus components can optionally document their endpoint, handlers, sagas, correlation rules, timeouts, and possible per-message outputs. Open **Handlers & sagas** on a component or generated integration to inspect these declarations. Start with the [NServiceBus guide and three-component sample](docs/nservicebus-processing.md), or use the [annotated component reference](docs/component-definition-reference.yaml). This records design behavior; live saga-instance telemetry is not included.
 
+Components can be authored through a schema-backed **Form** or the **Definition** YAML/JSON editor. Both support validation and connection previews before saving; the form includes messages, HTTP operations, technologies, handlers, and sagas. See the [component authoring guide](docs/component-form.md).
+
 There is no runtime mock data or automatic seeding. An empty database displays **“No integrations have been documented yet.”** Example definitions in this README are documentation only; tests use isolated, disposable fixture databases.
 
 ## What is implemented

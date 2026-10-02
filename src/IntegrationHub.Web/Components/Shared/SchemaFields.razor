@@ -1,0 +1,21 @@
+@using System.Text.Json.Nodes
+<div class="component-form-grid">
+@foreach (var field in Properties)
+{
+    if (ComponentFormSchema.Visible(Value, field.Key))
+    {
+        <SchemaField @key="field.Key" Root="Root" Parent="Value" Name="@field.Key" Schema="field.Value!.AsObject()" Required="@ComponentFormSchema.Required(Resolved, Value, field.Key, Path)" Path="@(Path + "/" + field.Key)" LockId="LockId" Changed="Changed" />
+    }
+}
+</div>
+@code {
+    [Parameter, EditorRequired] public JsonObject Root { get; set; } = new();
+    [Parameter, EditorRequired] public JsonObject Schema { get; set; } = new();
+    [Parameter, EditorRequired] public JsonObject Value { get; set; } = new();
+    [Parameter] public string Path { get; set; } = "/component";
+    [Parameter] public string[]? Names { get; set; }
+    [Parameter] public bool LockId { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private JsonObject Resolved => ComponentFormSchema.Resolve(Root, Schema);
+    private IEnumerable<KeyValuePair<string, JsonNode?>> Properties => Names is null ? Resolved["properties"]!.AsObject() : Names.Select(n => new KeyValuePair<string, JsonNode?>(n, Resolved["properties"]![n]));
+}

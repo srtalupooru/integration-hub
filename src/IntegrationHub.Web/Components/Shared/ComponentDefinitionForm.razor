@@ -1,0 +1,41 @@
+@using System.Text.Json.Nodes
+<div class="component-definition-form">
+    <section class="form-section"><h2>Component details</h2><p class="content-footnote">Fields marked * are required. The component ID identifies this component in one environment.</p>
+        <SchemaFields Root="Schema" Schema="ComponentSchema" Value="Component" Names="BasicFields" LockId="LockId" Changed="Changed" />
+    </section>
+    <details class="form-section" open><summary>Ownership and technologies</summary>
+        <SchemaFields Root="Schema" Schema="ComponentSchema" Value="Component" Names="OwnershipFields" LockId="LockId" Changed="Changed" />
+    </details>
+    <section class="form-section"><h2>Messages</h2><p class="content-footnote">Add the events or commands this component publishes, sends, or consumes.</p>
+        @if (ComponentFormSchema.HasLegacy(Component))
+        {
+            <p class="content-footnote">This definition uses the earlier message sections. They remain editable here; use Definition to migrate to a single messages list.</p>
+            <SchemaFields Root="Schema" Schema="ComponentSchema" Value="Component" Names="LegacyFields" Changed="Changed" />
+        }
+        else { <SchemaFields Root="Schema" Schema="ComponentSchema" Value="Component" Names="MessageFields" Changed="Changed" /> }
+    </section>
+    <details class="form-section"><summary>HTTP endpoints and calls</summary><p class="content-footnote">Endpoints receive HTTP requests. Calls reference an endpoint on another component.</p>
+        <SchemaFields Root="Schema" Schema="ComponentSchema" Value="Component" Names="HttpFields" Changed="Changed" />
+    </details>
+    <details class="form-section"><summary>Handlers and sagas</summary><p class="content-footnote">Optional NServiceBus behavior inside this component. Message references use the local IDs entered above.</p>
+        <SchemaFields Root="Schema" Schema="ComponentSchema" Value="Component" Names="ProcessingFields" Changed="Changed" />
+    </details>
+    <details class="form-section"><summary>Additional metadata</summary>
+        <SchemaFields Root="Schema" Schema="ComponentSchema" Value="Component" Names="MetadataFields" Changed="Changed" />
+    </details>
+</div>
+@code {
+    [Parameter, EditorRequired] public JsonObject Schema { get; set; } = new();
+    [Parameter, EditorRequired] public JsonObject Document { get; set; } = new();
+    [Parameter] public bool LockId { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private JsonObject Component => Document["component"]!.AsObject();
+    private JsonObject ComponentSchema => Schema["properties"]!["component"]!.AsObject();
+    private static readonly string[] BasicFields = ["name", "id", "type", "environment", "status"];
+    private static readonly string[] OwnershipFields = ["owner", "description", "technology"];
+    private static readonly string[] MessageFields = ["messages"];
+    private static readonly string[] LegacyFields = ["consumes", "publishes", "sends"];
+    private static readonly string[] HttpFields = ["endpoints", "calls"];
+    private static readonly string[] ProcessingFields = ["processing"];
+    private static readonly string[] MetadataFields = ["version", "domain", "criticality", "tags"];
+}

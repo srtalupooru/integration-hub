@@ -1,6 +1,7 @@
 using System.Text.Json;
 using IntegrationHub.Contracts;
 using IntegrationHub.Domain;
+using IntegrationHub.Infrastructure.Parsing;
 using IntegrationHub.Tests;
 using IntegrationHub.Web;
 using IntegrationHub.Web.Components.Pages;
@@ -16,6 +17,32 @@ namespace IntegrationHub.Api.Tests;
 [TestFixture]
 public sealed class ContentRenderingTests
 {
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Component_editor_loads_the_form_for_new_and_existing_definitions(bool existing)
+    {
+        var responses = new Dictionary<string, object>
+        {
+            ["/api/session"] = new SessionInfo("editor", ["Editor"], "Development", "csrf"),
+            ["/api/component-schema"] = new ComponentDefinitionSchema().Text
+        };
+        var parameters = ParameterView.Empty;
+        if (existing)
+        {
+            var parser = new ComponentDefinitionParser(new());
+            var source = ComponentExamples.Read("saga-worker");
+            var definition = parser.Parse(new(source)).Definition!;
+            responses[$"/api/components/{definition.Id}"] = new ComponentDetail(definition, source, "yaml", 1, "hash", DateTimeOffset.UnixEpoch, "editor", false);
+            responses[$"/api/components/{definition.Id}/definition?format=json"] = parser.Serialize(definition, "json");
+            parameters = ParameterView.FromDictionary(new Dictionary<string, object?> { [nameof(ComponentEditor.Id)] = definition.Id });
+        }
+        var html = await Render<LoadedComponentEditor>(responses, parameters);
+        html.Should().Contain("field-component-name").And.Contain("Generated definition").And.Contain("Save component")
+            .And.Contain("aria-pressed=\"true\"").And.NotContain("Loading the component form");
+        if (existing) html.Should().Contain("InvoiceId").And.Contain("Editing revision 1");
+        else html.Should().Contain("Nothing is stored until you save.");
+    }
+
     [TestCase(false)]
     [TestCase(true)]
     public async Task Messages_show_component_roles_and_routes_or_a_useful_empty_state(bool empty)
@@ -80,6 +107,10 @@ public sealed class ContentRenderingTests
         });
     }
     public sealed class LoadedMessages : ComponentMessages { protected override Task OnInitializedAsync() => ExecuteAsync(LoadAsync); }
+    public sealed class LoadedComponentEditor : ComponentEditor
+    {
+        protected override Task OnInitializedAsync() => ExecuteAsync(async () => { await Api.InitialiseAsync(); await LoadAsync(); });
+    }
     public sealed class LoadedIntegration : IntegrationDetails { protected override Task OnInitializedAsync() => ExecuteAsync(LoadAsync); }
     private sealed class TestNavigationManager : NavigationManager
     {
