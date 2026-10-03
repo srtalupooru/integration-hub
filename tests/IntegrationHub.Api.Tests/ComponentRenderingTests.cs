@@ -39,14 +39,14 @@ public sealed class ComponentRenderingTests
         await using var provider = services.BuildServiceProvider();
         await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());
         var definition = new ComponentDefinition { Messages = [
-            new() { Id = "published", Action = "publishes", Contract = "invoice.created", MessageType = MessageType.Event, Channel = new() { Kind = ChannelKind.Topic, Name = "events" } },
+            new() { Id = "published", Action = "publishes", Contract = "InvoiceCreated", MessageType = MessageType.Event, Channel = new() { Kind = ChannelKind.Topic, Name = "events" } },
             new() { Id = "sent", Action = "sends", Contract = "invoice.process", MessageType = MessageType.Command, Channel = new() { Kind = ChannelKind.Queue, Name = "commands" } },
             new() { Id = "received", Action = "consumes", Contract = "payment.received", MessageType = MessageType.Event, Description = "<script>unsafe</script>", Channel = new() { Kind = ChannelKind.Topic, Name = "payments" }, Subscription = "invoices" }
         ] };
         var html = await renderer.Dispatcher.InvokeAsync(async () => (await renderer.RenderComponentAsync<ComponentInteractions>(ParameterView.FromDictionary(
             new Dictionary<string, object?> { [nameof(ComponentInteractions.Definition)] = definition }))).ToHtmlString());
         html.Should().Contain("Commands sent").And.Contain("Events / messages published").And.Contain("Commands / events consumed")
-            .And.Contain("invoice.created").And.Contain("invoice.process").And.Contain("payment.received")
+            .And.Contain("InvoiceCreated").And.Contain("invoice.process").And.Contain("payment.received")
             .And.Contain(">publishes</span>").And.Contain(">sends</span>").And.Contain(">consumes</span>")
             .And.Contain("&lt;script&gt;").And.NotContain("<script>").And.NotContain("No interactions declared");
     }
@@ -59,9 +59,9 @@ public sealed class ComponentRenderingTests
         await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());
         var definition = new ComponentDefinition { Id = "api", Type = NodeType.Api,
             Endpoints = legacy ? [] : [new() { Id = "create", Method = HttpVerb.POST, Path = "/vendors" }],
-            Consumes = legacy ? [new() { Id = "old", Contract = "vendors.create", Version = "1.0", MessageType = MessageType.Request, Channel = new() { Kind = ChannelKind.Http, Name = "/vendors" } }] : [],
-            Sends = [new() { Id = "send", Contract = "vendors.create", MessageType = MessageType.Command, Channel = new() { Kind = ChannelKind.Queue, Name = "commands" } }],
-            Publishes = [new() { Id = "event", Contract = "vendors.created", MessageType = MessageType.Event, Channel = new() { Kind = ChannelKind.Topic, Name = "events" } }] };
+            Consumes = legacy ? [new() { Id = "old", Contract = "CreateVendor", Version = "1.0", MessageType = MessageType.Request, Channel = new() { Kind = ChannelKind.Http, Name = "/vendors" } }] : [],
+            Sends = [new() { Id = "send", Contract = "CreateVendor", MessageType = MessageType.Command, Channel = new() { Kind = ChannelKind.Queue, Name = "commands" } }],
+            Publishes = [new() { Id = "event", Contract = "VendorCreated", MessageType = MessageType.Event, Channel = new() { Kind = ChannelKind.Topic, Name = "events" } }] };
         var html = await renderer.Dispatcher.InvokeAsync(async () => (await renderer.RenderComponentAsync<ComponentInteractions>(ParameterView.FromDictionary(
             new Dictionary<string, object?> { [nameof(ComponentInteractions.Definition)] = definition }))).ToHtmlString());
         html.Should().Contain(legacy ? "Legacy HTTP declarations" : "Exposed HTTP endpoints")
@@ -95,14 +95,14 @@ public sealed class ComponentRenderingTests
         var services = new ServiceCollection().AddLogging();
         await using var provider = services.BuildServiceProvider();
         await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());
-        var binding = new MessageBinding { Id = "input", Contract = "vendors.created", Version = "1.0", Description = "<script>alert('x')</script>",
+        var binding = new MessageBinding { Id = "input", Contract = "VendorCreated", Version = "1.0", Description = "<script>alert('x')</script>",
             Channel = new() { Kind = ChannelKind.Topic, Namespace = "broker-dev", Name = "vendors" }, Subscription = "sync" };
         var bindingHtml = await renderer.Dispatcher.InvokeAsync(async () =>
         {
             var component = await renderer.RenderComponentAsync<BindingTable>(ParameterView.FromDictionary(new Dictionary<string, object?> { [nameof(BindingTable.Bindings)] = new[] { binding } }));
             return component.ToHtmlString();
         });
-        bindingHtml.Should().Contain("vendors.created").And.Contain("broker-dev").And.Contain("sync").And.Contain("&lt;script&gt;").And.NotContain("<script>");
+        bindingHtml.Should().Contain("VendorCreated").And.Contain("broker-dev").And.Contain("sync").And.Contain("&lt;script&gt;").And.NotContain("<script>");
         var findingsHtml = await renderer.Dispatcher.InvokeAsync(async () =>
         {
             var component = await renderer.RenderComponentAsync<DiscoveryFindings>(ParameterView.FromDictionary(new Dictionary<string, object?>

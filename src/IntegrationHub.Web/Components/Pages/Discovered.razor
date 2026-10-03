@@ -1,20 +1,32 @@
 @page "/discovered"
 @inherits ApiPage
-<PageTitle>Discovered integrations · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="eyebrow">CONNECTED THROUGH HTTP AND MESSAGING</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.AutoGraph" /></span><h1>Discovered integrations</h1></div><p>Read-only networks derived from active component definitions. Save a component, then refresh to see its latest connections.</p></div><div class="button-row"><MudButton OnClick="Refresh" StartIcon="@HubIcons.Refresh">Refresh</MudButton><MudButton Href="/components/new" Color="Color.Primary" Variant="Variant.Filled">Add component</MudButton></div></div>
+<PageTitle>@Heading · Integration Hub</PageTitle>
+<div class="page-heading"><div><div class="eyebrow">CONNECTED THROUGH HTTP AND MESSAGING</div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.AutoGraph" /></span><h1>@Heading</h1></div><p>Read-only networks derived from active component definitions. Save a component, then refresh to see its latest connections.</p></div><div class="button-row"><MudButton OnClick="Refresh" StartIcon="@HubIcons.Refresh">Refresh</MudButton><MudButton Href="/components/new" Color="Color.Primary" Variant="Variant.Filled">Add component</MudButton></div></div>
+@if (!FocusedView)
+{
 <div class="panel search-row"><MudTextField @bind-Value="_query" Immediate="true" Label="Search component, message contract or environment" Variant="Variant.Outlined" /><a href="/integrations">All integrations →</a></div>
+}
 <PageState Loading="Loading" Error="@Error" />
 @if (_result is not null)
 {
+    @if (!FocusedView)
+    {
     var networks = _result.Integrations.Where(i => $"{i.Name} {i.Environment} {string.Join(' ', i.Sources.Select(s => s.Id))} {string.Join(' ', i.Connections.Select(c => c.Contract))}".Contains(_query, StringComparison.OrdinalIgnoreCase)).ToArray();
     <div class="results-heading"><span>@networks.Length networks · @_result.UnlinkedComponentIds.Count unlinked components · @_result.RetiredComponentIds.Count retired</span><span>@_result.Issues.Count findings to review</span></div>
     @if (_result.Integrations.Count == 0) { <div class="panel empty-state"><h2>No resolved connections yet</h2><p>Add a system that calls an API endpoint, or a function that consumes a command/event sent by an API. Unresolved declarations remain visible below.</p><MudButton Href="/components" Color="Color.Primary">View components →</MudButton></div> }
     else if (networks.Length == 0) { <p>No networks match this search.</p> }
     else { <div class="catalogue-grid">@foreach (var i in networks) { <a class="integration-card" href="@($"/discovered/{i.Id}")"><div class="card-top"><span class="badge">Discovered</span><span class="badge">@i.Environment</span></div><h2>@i.Name</h2><p>@i.Sources.Count components · @i.Connections.Count connections</p><div class="tag-list">@foreach (var contract in i.Connections.Select(InteractionLabels.Describe).Distinct().Take(4)) { <span class="tag">@contract</span> }</div><div class="card-bottom"><span>@i.Issues.Count findings @(i.HasCycle ? "· contains a cycle" : "")</span><span>Explore →</span></div></a> }</div> }
-    @if (_result.UnlinkedComponentIds.Count > 0) { <section class="panel mt-6"><h2>Not linked yet</h2><div class="tag-list">@foreach (var id in _result.UnlinkedComponentIds) { <a class="tag" href="@($"/components/{id}")">@id</a> }</div></section> }
-    <section class="panel mt-6"><h2>Discovery findings</h2><p class="muted">Unmatched inputs and outputs can be legitimate external boundaries. Findings explain why connections were or were not made.</p><DiscoveryFindings Issues="_result.Issues" /></section>
+    }
+    @if (View != "findings" && (_result.UnlinkedComponentIds.Count > 0 || View == "unlinked")) { <section class="panel mt-6"><h2>Not linked yet (@_result.UnlinkedComponentIds.Count)</h2>@if (_result.UnlinkedComponentIds.Count == 0) { <p>No components are awaiting a match.</p> }<div class="tag-list">@foreach (var id in _result.UnlinkedComponentIds) { <a class="tag" href="@($"/components/{id}")">@id</a> }</div></section> }
+    @if (View != "unlinked")
+    {
+    <section class="panel mt-6"><h2>Discovery findings</h2><p class="muted">Unmatched inputs and outputs can be legitimate external boundaries. Findings explain why connections were or were not made.</p><DiscoveryFindings Issues="_result.Issues" /><p class="content-footnote">For validation warnings in imported definitions, open an integration’s Source &amp; history tab in the <a href="/integrations">integration catalogue</a>.</p></section>
+    }
 }
 @code {
+    [SupplyParameterFromQuery(Name = "view")] public string? View { get; set; }
+    private bool FocusedView => View is "unlinked" or "findings";
+    private string Heading => View switch { "unlinked" => "Not linked yet", "findings" => "Findings to review", _ => "Discovered integrations" };
     private DiscoveryResult? _result;
     private string _query = "";
     protected override async Task LoadAsync() => _result = await Api.GetAsync<DiscoveryResult>("/api/discovery");

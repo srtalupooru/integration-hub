@@ -22,6 +22,31 @@ public sealed class ComponentApiTests
         return (await response.Content.ReadFromJsonAsync<ComponentDetail>(HubJson.Options))!;
     }
     private async Task<DiscoveryResult> Discover() => (await _client.GetFromJsonAsync<DiscoveryResult>("/api/discovery", HubJson.Options))!;
+    [TestCase("InvoiceCreated", "InvoiceCreated", true)]
+    [TestCase("InvoiceCreated", "invoicecreated", false)]
+    [TestCase("InvoiceCreated", "invoice.created", false)]
+    [TestCase("invoice.created", "invoice.created", true)]
+    public async Task Message_names_are_preserved_and_connections_require_exact_contract_names(string published, string consumed, bool matches)
+    {
+        foreach (var (sample, name) in new[] { ("vendor-api", published), ("vendor-function", consumed) })
+        {
+            var source = ComponentExamples.Read(sample).Replace("VendorCreated", name, StringComparison.Ordinal);
+            var response = await _client.PostAsJsonAsync("/api/components", new DefinitionRequest(source));
+            response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        }
+        var declarations = (await _client.GetFromJsonAsync<ComponentMessageOccurrence[]>("/api/component-messages", HubJson.Options))!;
+        declarations.Single(d => d.ComponentId == "vendor-api-dev").Binding.Contract.Should().Be(published);
+        declarations.Single(d => d.ComponentId == "vendor-sync-function-dev").Binding.Contract.Should().Be(consumed);
+        var discovery = await Discover();
+        discovery.Integrations.Should().HaveCount(matches ? 1 : 0);
+        if (matches) discovery.Integrations.Single().Connections.Single().Contract.Should().Be(published);
+        foreach (var format in new[] { "yaml", "json" })
+        {
+            var source = await _client.GetStringAsync("/api/components/vendor-api-dev/definition?format=" + format);
+            new ComponentDefinitionParser(new()).Parse(new(source, format)).Definition!.PublishedMessages.Single().Contract.Should().Be(published);
+        }
+    }
+
     [Test]
     public async Task Form_draft_can_be_previewed_saved_converted_and_edited_with_revision_protection()
     {
@@ -91,14 +116,14 @@ public sealed class ComponentApiTests
         var flow = (await Discover()).Integrations.Single();
         flow.Definition.Nodes.Should().HaveCount(3); flow.Connections.Should().HaveCount(3);
         flow.Processing.Should().HaveCount(3);
-        var created = flow.Connections.Single(c => c.Contract == "invoice.created");
+        var created = flow.Connections.Single(c => c.Contract == "InvoiceCreated");
         created.HandledBy.Should().HaveCount(2).And.Contain(r => r.Kind == "Saga" && r.StartsSaga)
             .And.Contain(r => r.Kind == "Handler");
         created.Delivery.Should().NotBe("Competing");
-        var command = flow.Connections.Single(c => c.Contract == "payment.request");
+        var command = flow.Connections.Single(c => c.Contract == "RequestPayment");
         command.ProducedBy.Should().ContainSingle().Which.Trigger.Should().Be("on-invoice-created");
         command.HandledBy.Should().ContainSingle().Which.Kind.Should().Be("Handler");
-        flow.Connections.Single(c => c.Contract == "payment.confirmed").HandledBy.Should()
+        flow.Connections.Single(c => c.Contract == "PaymentConfirmed").HandledBy.Should()
             .ContainSingle(r => r.CompletesSaga && !r.StartsSaga);
         flow.Connections.Should().NotContain(c => c.ConsumeBindingId == "payment-deadline");
         flow.HasCycle.Should().BeTrue();
@@ -119,7 +144,7 @@ public sealed class ComponentApiTests
         (await _client.PutAsJsonAsync("/api/components/invoice-process-dev", new DefinitionRequest(changed, ExpectedRevision: 1))).EnsureSuccessStatusCode();
         var updated = (await Discover()).Integrations.Single();
         updated.Id.Should().Be(flow.Id);
-        updated.Connections.Single(c => c.Contract == "payment.request").ProducedBy.Should().BeEmpty();
+        updated.Connections.Single(c => c.Contract == "RequestPayment").ProducedBy.Should().BeEmpty();
         var versions = (await _client.GetFromJsonAsync<ComponentVersion[]>("/api/components/invoice-process-dev/versions", HubJson.Options))!;
         versions.Should().HaveCount(2); versions.Last().OriginalDefinition.Should().Be(worker.OriginalDefinition);
         (await _client.DeleteAsync("/api/components/invoice-process-dev?expectedRevision=2")).EnsureSuccessStatusCode();
@@ -219,7 +244,7 @@ public sealed class ComponentApiTests
         (await _client.GetAsync("/api/catalogue?kind=invalid")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
-    [TestCase("q=VENDORS.CREATED", 1)]
+    [TestCase("q=VENDORCREATED", 1)]
     [TestCase("q=%2Fvendors", 1)]
     [TestCase("q=missing-contract", 0)]
     [TestCase("domain=Finance&owner=Integration%20team&technology=Azure%20Functions&tag=discovered&status=Draft&criticality=Medium", 1)]
@@ -300,7 +325,7 @@ public sealed class ComponentApiTests
         var flow = discovery.Integrations.Should().ContainSingle().Subject;
         flow.Sources.Should().HaveCount(3); flow.Connections.Should().HaveCount(2);
         var view = await _client.GetFromJsonAsync<DiscoveredIntegrationView>($"/api/discovery/{flow.Id}", HubJson.Options);
-        view!.Diagram.Should().StartWith("flowchart LR").And.Contain("vendors#46;created");
+        view!.Diagram.Should().StartWith("flowchart LR").And.Contain("VendorCreated");
         view.Documentation.Sections.Should().Contain(s => s.Title == "Matching evidence").And.Contain(s => s.Title == "Source component revisions");
         (await _client.GetStringAsync($"/api/discovery/{flow.Id}/documentation?format=markdown")).Should().Contain("Source component revisions");
         (await _client.GetStringAsync($"/api/discovery/{flow.Id}/diagram")).Should().Be(view.Diagram);
@@ -335,7 +360,7 @@ public sealed class ComponentApiTests
         var api = await Add("vendor-api"); await Add("vendor-function");
         var initial = await Discover(); var id = initial.Integrations.Single().Id;
         var original = api.OriginalDefinition;
-        var changed = original.Replace("vendors.created", "vendors.changed", StringComparison.Ordinal);
+        var changed = original.Replace("VendorCreated", "VendorChanged", StringComparison.Ordinal);
         var previewResponse = await _client.PostAsJsonAsync("/api/components/preview", new DefinitionRequest(changed, ExpectedRevision: 1));
         var preview = (await previewResponse.Content.ReadFromJsonAsync<ComponentPreview>(HubJson.Options))!;
         preview.RemovedIntegrationIds.Should().Contain(id);

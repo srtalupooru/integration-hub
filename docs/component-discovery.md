@@ -13,7 +13,7 @@ For example:
 
 ```text
 Procurement system -- POST /vendors --> Vendor API
-Vendor API -- vendors.created v1.0 / topic --> Vendor sync function
+Vendor API -- VendorCreated v1.0 / topic --> Vendor sync function
 Vendor sync function -- PUT /vendors --> Elite API
 ```
 
@@ -43,9 +43,9 @@ validate and save. It will appear in Systems automatically.
 
 1. Stop the application with Ctrl+C and run `dotnet run --project src/IntegrationHub.Api` again. In Development, the additive SQLite migration is applied automatically. Existing integrations remain intact.
 2. Refresh your browser. Open **Components → Add component**.
-3. Click **API example**, then **Validate & preview links**, then **Save component**. The API exposes `POST /vendors` and publishes `vendors.created`; it has no consumed messages.
+3. Click **API example**, then **Validate & preview links**, then **Save component**. The API exposes `POST /vendors` and publishes `VendorCreated`; it has no consumed messages.
 4. Add another component using **Function example**, validate and save it.
-5. Open **Integrations** with the kind filter set to **All integrations** or **Discovered**. The API and function appear as a discovered integration connected through `vendors.created` on the same topic. You can also open **Discovered integrations** for matching findings.
+5. Open **Integrations** with the kind filter set to **All integrations** or **Discovered**. The API and function appear as a discovered integration connected through `VendorCreated` on the same topic. You can also open **Discovered integrations** for matching findings.
 6. Add the **Receiver example** and **Caller example**. Refresh Discovered integrations to see the four-component network: system → API → function → receiver API. The two HTTP edges show their methods and paths.
 7. Open its Overview, Connections, Documentation and Review tabs. Each edge names both source binding IDs. The source revision table records the definitions used.
 8. Edit a component's message version or channel. Preview shows findings and networks whose membership would be added or removed. Save and refresh to see the recomputed result.
@@ -81,7 +81,7 @@ component:
   messages:
     - id: vendor-created
       action: publishes
-      contract: vendors.created
+      contract: VendorCreated
       version: "1.0"
       messageType: Event
       channel:
@@ -103,7 +103,7 @@ component:
   messages:
     - id: on-vendor-created
       action: consumes
-      contract: vendors.created
+      contract: VendorCreated
       version: "1.0"
       messageType: Event
       channel:
@@ -113,7 +113,7 @@ component:
       subscription: elite-vendor-sync
 ```
 
-Component IDs identify one documented deployment or handler. Use different IDs for different environments. IDs, contract identities and environments are lowercase slugs; IDs are at most 96 characters. Display names may be human-readable. IDs must be unique across endpoints, calls and message declarations within a component. Empty sections can be omitted. A self-consuming component uses separate input/output binding IDs.
+Component IDs identify one documented deployment or handler. Use different IDs for different environments. Component/binding IDs and environments are lowercase slugs; IDs are at most 96 characters. Message contracts use their actual names, such as `InvoiceCreated` or `ProcessInvoice`, with exact casing (up to 128 characters; letters, digits, dots, underscores, and hyphens, starting with a letter or digit). Dots are optional. Existing dotted contract names remain supported and are not automatically renamed. To correct a previously saved sample, update the contract on both producer and consumer; changing only one side leaves the route unresolved. Display names may be human-readable. IDs must be unique across endpoints, calls and message declarations within a component. Empty sections can be omitted. A self-consuming component uses separate input/output binding IDs.
 
 `version` on the component is its document/application version. `version` on a binding is the message contract version used for matching; these are independent. Contract versions must be explicit numeric versions such as `1.0`, `1.0.0` or `2.0.0-beta.1`. `latest`, `*`, ranges and implicit compatibility are not accepted.
 
@@ -167,7 +167,7 @@ An API can send a command after receiving an HTTP request:
   messages:
     - id: send-create-vendor
       action: sends
-      contract: vendors.create
+      contract: CreateVendor
       version: "1.0"
       messageType: Command
       channel:
@@ -203,7 +203,7 @@ A publication and consumption must agree on all of these fields:
 | Field | Rule |
 | --- | --- |
 | Component environment | Exact, lowercase identity; Development and Production never implicitly connect |
-| Contract | Exact lowercase qualified identity, such as `vendors.created` |
+| Contract | Exact, case-sensitive message name, such as `VendorCreated` |
 | Contract version | Exact string; `1.0` and `1.0.0` are different contracts |
 | Message type | Exact Event, Command, Document, Request or Response |
 | Channel kind | Exact Topic, Queue or Stream |

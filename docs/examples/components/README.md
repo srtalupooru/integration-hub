@@ -13,8 +13,8 @@ Save these four definitions (the order below keeps missing HTTP targets to a min
 | Order | File | Editor example button | Purpose |
 | --- | --- | --- | --- |
 | 1 | [elite-api.yaml](elite-api.yaml) | Receiver example | Exposes `PUT /vendors` |
-| 2 | [vendor-api.yaml](vendor-api.yaml) | API example | Exposes `POST /vendors` and publishes `vendors.created` |
-| 3 | [vendor-function.yaml](vendor-function.yaml) | Function example | Consumes `vendors.created` and calls the Elite API |
+| 2 | [vendor-api.yaml](vendor-api.yaml) | API example | Exposes `POST /vendors` and publishes `VendorCreated` |
+| 3 | [vendor-function.yaml](vendor-function.yaml) | Function example | Consumes `VendorCreated` and calls the Elite API |
 | 4 | [vendor-system.yaml](vendor-system.yaml) | Caller example | Calls the Vendor API |
 
 Open **Integrations** after saving all four and select the entry marked **Discovered**. With only these samples
@@ -23,7 +23,7 @@ in the catalogue, expect one network containing four components and three links:
 ```text
 Procurement system
   -- POST /vendors --> Vendor API
-  -- vendors.created (Event, topic) --> Vendor sync function
+  -- VendorCreated (Event, topic) --> Vendor sync function
   -- PUT /vendors --> Elite vendor API
 ```
 
@@ -40,10 +40,10 @@ the **Command API example** and **Command worker example** buttons.
 
 ```text
 Vendor command API
-  -- vendors.create (Command, queue) --> Vendor command worker
+  -- CreateVendor (Command, queue) --> Vendor command worker
 ```
 
-The worker also publishes `vendors.command-created` on `vendor-command-results`.
+The worker also publishes `VendorCreatedAfterCommand` on `vendor-command-results`.
 This pair deliberately has no completion-event consumer or documented HTTP caller.
 It forms a separate network from the four-component event example.
 

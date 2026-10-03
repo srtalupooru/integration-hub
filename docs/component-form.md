@@ -9,7 +9,8 @@ An Editor or Admin role is required to author components.
    select **Add** for each entry.
 3. Add messages. Choose **publishes** for events, **sends** for commands, or
    **consumes** for incoming messages. Enter the local binding ID, shared contract
-   and version, and broker channel. Consumed topics and streams also require a
+   and version, and broker channel. Use the actual message name (for example
+   `InvoiceCreated`) with identical casing on both sides; dots are optional. Consumed topics and streams also require a
    subscription or consumer group. Publishing and sending select the appropriate
    message type automatically.
 4. Expand **HTTP endpoints and calls** when needed. An API exposes endpoints;

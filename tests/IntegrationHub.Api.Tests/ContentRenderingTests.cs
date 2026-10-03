@@ -49,12 +49,12 @@ public sealed class ContentRenderingTests
     {
         ComponentMessageOccurrence[] items = empty ? [] : [new("invoices", "Invoice <script>", "development", "Consumes", new()
         {
-            Id = "on-created", Contract = "invoice.created", Version = "1.0", MessageType = MessageType.Event,
+            Id = "on-created", Contract = "InvoiceCreated", Version = "1.0", MessageType = MessageType.Event,
             Channel = new() { Kind = ChannelKind.Topic, Namespace = "finance-dev", Name = "invoice-events" }, Subscription = "workers"
         })];
         var html = await Render<LoadedMessages>(new() { ["/api/component-messages"] = items });
         if (empty) html.Should().Contain("No messages yet").And.Contain("Browse components").And.NotContain("<table>");
-        else html.Should().Contain("invoice.created").And.Contain("Invoice &lt;script&gt;").And.NotContain("<script>")
+        else html.Should().Contain("InvoiceCreated").And.Contain("Invoice &lt;script&gt;").And.NotContain("<script>")
             .And.Contain("Consumes").And.Contain("invoice-events").And.Contain("finance-dev").And.Contain("workers")
             .And.Contain("Routing details").And.Contain("href=\"/components/invoices\"").And.NotContain("No messages yet");
     }

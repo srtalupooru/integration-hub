@@ -74,7 +74,7 @@ component:
   #messages:
   #  - id: # string. Required. Unique local message binding ID.
   #    action: # 'publishes' | 'sends' | 'consumes'. Required. Case-sensitive.
-  #    contract: # string. Required. Lowercase contract ID. Example: invoice.created.
+  #    contract: # string. Required. Exact message name, including casing. Example: InvoiceCreated. Dots are optional.
   #    version: # string. Required. Message contract version. Example: '1.0'.
   #    messageType: # 'Event' | 'Command' | 'Document' | 'Request' | 'Response'. Required.
   #                 # Must be Event when action = publishes; Command when action = sends.

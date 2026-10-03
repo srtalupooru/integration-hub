@@ -23,7 +23,7 @@ component:
   messages:
     - id: on-vendor-created
       action: consumes
-      contract: vendors.created
+      contract: VendorCreated
       version: "1.0"
       messageType: Event
       contentType: application/json

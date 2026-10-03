@@ -46,7 +46,7 @@ public static class ComponentFormSchema
     {
         "id" => "Lowercase letters, numbers, dots, underscores, or hyphens. IDs must be unique in their scope.",
         "environment" => "For example: development, test, production. Connections only match in the same environment.",
-        "contract" => "Shared contract name, such as invoice.created. Use the same name and version on both components.",
+        "contract" => "Exact message name used by your application, such as InvoiceCreated or ProcessInvoice. Dots are optional. Use identical spelling, casing, and version on both components.",
         "action" => "Publish an event, send a command, or consume an incoming message.",
         "subscription" => "Required for consumed topics and streams. For a stream, enter the consumer group.",
         "namespace" => "The broker namespace or cluster shared by the sender and receiver.",

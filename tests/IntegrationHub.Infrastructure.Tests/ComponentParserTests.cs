@@ -8,6 +8,41 @@ namespace IntegrationHub.Infrastructure.Tests;
 public sealed class ComponentParserTests
 {
     private readonly ComponentDefinitionParser _parser = new(new());
+    [TestCase("messages", "InvoiceCreated")]
+    [TestCase("messages", "ProcessInvoice")]
+    [TestCase("messages", "finance.InvoiceCreated")]
+    [TestCase("messages", "invoice.created")]
+    [TestCase("publishes", "InvoiceCreated")]
+    [TestCase("consumes", "InvoiceCreated")]
+    [TestCase("sends", "ProcessInvoice")]
+    public void Contract_names_preserve_actual_spelling_in_both_formats_and_legacy_sections(string section, string name)
+    {
+        var root = JsonNode.Parse(Json())!; var component = root["component"]!.AsObject();
+        var binding = component["messages"]![0]!.DeepClone().AsObject();
+        binding["contract"] = name; binding["channel"]!["kind"] = "Queue";
+        if (section != "messages") { binding.Remove("action"); component.Remove("messages"); }
+        if (section == "sends") binding["messageType"] = "Command";
+        component[section] = new JsonArray(binding);
+        var parsed = _parser.Parse(new(root.ToJsonString()));
+        parsed.Validation.IsValid.Should().BeTrue();
+        foreach (var format in new[] { "json", "yaml" })
+        {
+            var restored = _parser.Parse(new(_parser.Serialize(parsed.Definition!, format), format));
+            restored.Validation.IsValid.Should().BeTrue();
+            restored.Definition!.ConsumedMessages.Concat(restored.Definition.PublishedMessages).Concat(restored.Definition.SentMessages).Should().ContainSingle().Which.Contract.Should().Be(name);
+        }
+    }
+
+    [TestCase("")]
+    [TestCase(" InvoiceCreated")]
+    [TestCase("InvoiceCreated ")]
+    [TestCase("Invoice Created")]
+    public void Contract_names_still_reject_empty_or_whitespace_padded_values(string name)
+    {
+        var root = JsonNode.Parse(Json())!; root["component"]!["messages"]![0]!["contract"] = name;
+        _parser.Parse(new(root.ToJsonString())).Validation.IsValid.Should().BeFalse();
+    }
+
     [TestCase("[\"ASP.NET Core\",\"FastEndpoints\"]", 2)]
     [TestCase("[]", 0)]
     [TestCase("\"ASP.NET Core, FastEndpoints\"", 1)]
@@ -194,7 +229,7 @@ public sealed class ComponentParserTests
           environment: dev
           consumes:
             - id: request
-              contract: vendors.create
+              contract: CreateVendor
               version: "1.0"
               messageType: Request
               channel:

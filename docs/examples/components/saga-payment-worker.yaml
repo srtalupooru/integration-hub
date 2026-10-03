@@ -9,7 +9,7 @@ component:
   messages:
     - id: on-request-payment
       action: consumes
-      contract: payment.request
+      contract: RequestPayment
       version: "1.0"
       messageType: Command
       channel:
@@ -18,7 +18,7 @@ component:
         name: payment-commands
     - id: payment-confirmed
       action: publishes
-      contract: payment.confirmed
+      contract: PaymentConfirmed
       version: "1.0"
       messageType: Event
       channel:

@@ -21,7 +21,7 @@ component:
   messages:
     - id: send-create-vendor
       action: sends
-      contract: vendors.create
+      contract: CreateVendor
       version: "1.0"
       messageType: Command
       contentType: application/json

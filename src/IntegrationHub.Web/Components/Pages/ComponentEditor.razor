@@ -30,7 +30,7 @@ else
         {
             <div class="button-row"><MudButton OnClick="@(() => ConvertSource("json"))">Format as JSON</MudButton><MudButton OnClick="@(() => ConvertSource("yaml"))">Format as YAML</MudButton></div>
         <label for="component-source" class="sr-only">Component definition</label><textarea id="component-source" class="source-editor" value="@_source" @oninput="Changed" spellcheck="false" placeholder="component:&#10;  id: vendor-api-dev&#10;  ..."></textarea>
-        <details class="quiet-details"><summary>YAML formatting help</summary><p>Indent fields beneath <code>component:</code> with two spaces. Indent list fields beneath their item. HTTP paths start with <code>/</code>; contract names use lowercase, such as <code>invoice.created</code>.</p><pre>component:
+        <details class="quiet-details"><summary>YAML formatting help</summary><p>Indent fields beneath <code>component:</code> with two spaces. Indent list fields beneath their item. HTTP paths start with <code>/</code>; use the actual message name, such as <code>InvoiceCreated</code>. Publishers and consumers must use identical spelling and casing.</p><pre>component:
   id: invoice-api
   name: Invoice API
   type: Api

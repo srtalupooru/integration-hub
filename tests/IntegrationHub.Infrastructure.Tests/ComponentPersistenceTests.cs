@@ -36,7 +36,7 @@ public sealed class ComponentPersistenceTests
         var loaded = (await repository.GetAsync("vendor-api-dev", default))!;
         loaded.Definition.Technology.Should().Equal("ASP.NET Core, FastEndpoints");
         loaded.Definition.Messages.Should().BeEmpty();
-        loaded.Definition.PublishedMessages.Should().ContainSingle().Which.Contract.Should().Be("vendors.created");
+        loaded.Definition.PublishedMessages.Should().ContainSingle().Which.Contract.Should().Be("VendorCreated");
         loaded.OriginalDefinition.Should().Be(source);
         loaded.DefinitionHash.Should().Be(hash);
         (await repository.ListAsync(false, default)).Single().Definition.Technology.Should().Equal(loaded.Definition.Technology);

@@ -1,40 +1,128 @@
 @page "/"
 @inherits ApiPage
 <PageTitle>Dashboard · Integration Hub</PageTitle>
-<div class="page-heading"><div><div class="page-title-row"><span class="page-symbol"><MudIcon Icon="@HubIcons.SpaceDashboard" /></span><h1>Workspace overview</h1></div><p>See your components, connected integrations, and items to review.</p></div><MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@HubIcons.Add">Add component</MudButton></div>
+<div class="page-heading">
+    <div>
+        <div class="page-title-row"><span class="page-symbol">
+            <MudIcon Icon="@HubIcons.SpaceDashboard" />
+        </span>
+        <h1>Integrations Overview</h1>
+    </div>
+    <p>See your components, connected integrations, and items to review.</p>
+</div>
+<MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@HubIcons.Add">Add
+    component</MudButton>
+</div>
 <PageState Loading="Loading" Error="@Error" />
 @if (_dashboard is not null && _components is not null)
 {
     <div class="metric-grid overview-metrics">
         @foreach (var metric in Metrics())
-        { <div class="metric-card"><span>@metric.Label</span><span class="metric-symbol"><MudIcon Icon="@metric.Icon" /></span><strong>@metric.Value</strong><small>@metric.Note</small></div> }
+        {
+            <a class="metric-card" href="@metric.Href"><span>@metric.Label</span><span class="metric-symbol">
+                <MudIcon Icon="@metric.Icon" />
+            </span><strong>@metric.Value</strong><small>@metric.Note</small></a>
+        }
     </div>
     @if (_dashboard.TotalIntegrations == 0 && _components.Networks == 0)
     {
-        <section class="empty-hero"><div class="empty-illustration" aria-hidden="true"><div class="empty-node"><MudIcon Icon="@HubIcons.Code" /></div><span class="connector"></span><div class="empty-node center"><MudIcon Icon="@HubIcons.AccountTree" /></div><span class="connector"></span><div class="empty-node"><MudIcon Icon="@HubIcons.Bolt" /></div></div><h2>Build a clear picture of your integrations</h2><p>Add an API or function and describe its calls and messages. Matching components connect automatically.</p><div class="button-row"><MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary">@(_components.Components == 0 ? "Add your first component" : "Add a component")</MudButton><MudButton Href="/import" Variant="Variant.Outlined" Color="Color.Primary">Import an integration</MudButton></div></section>
-    }
-    <div class="dashboard-grid mt-6">
-        <section class="panel">
-            <div class="panel-heading"><div><h2>Recently updated integrations</h2><p>Your latest changes.</p></div><a href="/integrations">View all →</a></div>
-            @if (_recent is not null && _recent.Items.Count > 0)
-            {
-                @foreach (var entry in _recent.Items)
+        <section class="empty-hero">
+            <div class="empty-illustration" aria-hidden="true">
+                <div class="empty-node">
+                    <MudIcon Icon="@HubIcons.Code" />
+                </div><span class="connector"></span>
+                <div class="empty-node center">
+                    <MudIcon Icon="@HubIcons.AccountTree" />
+                </div><span class="connector"></span>
+                <div class="empty-node">
+                    <MudIcon Icon="@HubIcons.Bolt" />
+                </div>
+            </div>
+            <h2>Build a clear picture of your integrations</h2>
+            <p>Add an API or function and describe its calls and messages. Matching components connect automatically.</p>
+            <div class="button-row">
+                <MudButton Href="/components/new" Variant="Variant.Filled" Color="Color.Primary">@(_components.Components == 0 ?
+                                                                                                                                                                                                                                                            "Add your first component" : "Add a component")</MudButton>
+                    <MudButton Href="/import" Variant="Variant.Outlined" Color="Color.Primary">Import an integration</MudButton>
+                </div>
+            </section>
+        }
+        <div class="dashboard-grid mt-6">
+            <section class="panel">
+                <div class="panel-heading">
+                    <div>
+                        <h2>Recently updated integrations</h2>
+                        <p>Your latest changes.</p>
+                    </div><a href="/integrations">View all →</a>
+                </div>
+                @if (_recent is not null && _recent.Items.Count > 0)
                 {
-                    var item = entry.Summary;
-                    <a class="integration-row" href="@entry.DetailUrl"><span class="integration-icon"><MudIcon Icon="@(entry.Origin == "Discovered" ? HubIcons.AutoGraph : HubIcons.AccountTree)" /></span><span><strong>@item.Name</strong><small>@entry.Origin · @ComponentVisuals.OrUnspecified(item.BusinessDomain)</small></span><time>@item.UpdatedAt.ToLocalTime().ToString("dd MMM")</time></a>
+                    @foreach (var entry in _recent.Items)
+                    {
+                        var item = entry.Summary;
+                        <a class="integration-row" href="@entry.DetailUrl"><span class="integration-icon">
+                            <MudIcon Icon="@(entry.Origin == "Discovered" ? HubIcons.AutoGraph : HubIcons.AccountTree)" />
+                        </span><span><strong>@item.Name</strong><small>@entry.Origin ·
+                        @ComponentVisuals.OrUnspecified(item.BusinessDomain)</small></span><time>@item.UpdatedAt.ToLocalTime().ToString("dd MMM")</time></a>
+                    }
                 }
-            }
-            else { <p>Your integrations will appear here once you import a definition or connect components.</p> }
-        </section>
-        <section class="panel"><div class="panel-heading"><h2>Next steps</h2></div><div class="quick-actions">
-            <a class="quick-action" href="/components"><MudIcon Icon="@HubIcons.Widgets" /><span><strong>Explore components</strong><small>APIs, functions, and the messages they exchange.</small></span></a>
-            <a class="quick-action" href="/integrations"><MudIcon Icon="@HubIcons.AccountTree" /><span><strong>See connected integrations</strong><small>Follow a flow from source to destination.</small></span></a>
-            <a class="quick-action" href="/discovered"><MudIcon Icon="@HubIcons.Rule" /><span><strong>Review connection findings</strong><small>Understand why components match or remain unlinked.</small></span></a>
-        </div></section>
-    </div>
-    @if (_dashboard.TotalIntegrations > 0)
-    {
-        <details class="quiet-details"><summary>Authored integration breakdown</summary><p>These figures cover manually authored definitions. Automatically discovered integrations are included in the workspace total above.</p><div class="component-summary"><span>@_dashboard.ProductionIntegrations in production</span><span>@_dashboard.HighCriticalityIntegrations high criticality</span><span>@_dashboard.Systems registered systems</span><span>@_dashboard.Messages message definitions</span></div><div class="dashboard-grid"><div><h3>By domain</h3>@foreach (var item in _dashboard.ByDomain) { <div class="count-row"><span>@ComponentVisuals.OrUnspecified(item.Name)</span><strong>@item.Count</strong></div> }</div><div><h3>By status</h3>@foreach (var item in _dashboard.ByStatus) { <div class="count-row"><span>@item.Name</span><strong>@item.Count</strong></div> }</div><div><h3>Most referenced systems</h3>@foreach (var item in _dashboard.MostReferencedSystems) { <div class="count-row"><a href="@($"/systems/{item.Name}")">@item.Name</a><strong>@item.Count</strong></div> }</div></div></details>
+                else
+                {
+                    <p>Your integrations will appear here once you import a definition or connect components.</p>
+                }
+            </section>
+            <section class="panel">
+                <div class="panel-heading">
+                    <h2>Next steps</h2>
+                </div>
+                <div class="quick-actions">
+                    <a class="quick-action" href="/components">
+                        <MudIcon Icon="@HubIcons.Widgets" /><span><strong>Explore components</strong><small>APIs, functions, and
+                        the messages they exchange.</small></span>
+                    </a>
+                    <a class="quick-action" href="/integrations">
+                        <MudIcon Icon="@HubIcons.AccountTree" /><span><strong>See connected integrations</strong><small>Follow a
+                        flow from source to destination.</small></span>
+                    </a>
+                    <a class="quick-action" href="/discovered">
+                        <MudIcon Icon="@HubIcons.Rule" /><span><strong>Review connection findings</strong><small>Understand why
+                        components match or remain unlinked.</small></span>
+                    </a>
+                </div>
+            </section>
+        </div>
+        @if (_dashboard.TotalIntegrations > 0)
+        {
+            <details class="quiet-details">
+                <summary>Authored integration breakdown</summary>
+                <p>These figures cover manually authored definitions. Automatically discovered integrations are included in the
+                    workspace total above.</p>
+                    <div class="component-summary"><span>@_dashboard.ProductionIntegrations in
+                        production</span><span>@_dashboard.HighCriticalityIntegrations high
+                        criticality</span><span>@_dashboard.Systems registered systems</span><span>@_dashboard.Messages message
+                        definitions</span></div>
+                        <div class="dashboard-grid">
+                            <div>
+                                <h3>By domain</h3>@foreach (var item in _dashboard.ByDomain) {
+                                <div class="count-row">
+                                    <span>@ComponentVisuals.OrUnspecified(item.Name)</span><strong>@item.Count</strong>
+                                </div>
+                            }
+                        </div>
+                        <div>
+                            <h3>By status</h3>@foreach (var item in _dashboard.ByStatus) {
+                            <div class="count-row">
+                                <span>@item.Name</span><strong>@item.Count</strong>
+                            </div>
+                        }
+                    </div>
+                    <div>
+                        <h3>Most referenced systems</h3>@foreach (var item in _dashboard.MostReferencedSystems) {
+                        <div class="count-row"><a href="@($"/systems/{item.Name}")">@item.Name</a><strong>@item.Count</strong></div>
+                    }
+                </div>
+            </div>
+        </details>
     }
 }
 @code {
@@ -47,11 +135,11 @@
         _components = await Api.GetAsync<ComponentDashboard>("/api/component-dashboard");
         _recent = await Api.GetAsync<PagedResult<CatalogueEntry>>("/api/catalogue?pageSize=5");
     }
-    private IEnumerable<(string Label, int Value, string Note, string Icon)> Metrics()
+    private IEnumerable<(string Label, int Value, string Note, string Icon, string Href)> Metrics()
     {
-        yield return ("All integrations", _dashboard!.TotalIntegrations + (_components?.Networks ?? 0), "Authored and discovered", HubIcons.AccountTree);
-        yield return ("Components", _components?.Components ?? 0, "APIs, functions and systems", HubIcons.Widgets);
-        yield return ("Not linked yet", _components?.Unlinked ?? 0, "Components awaiting a match", HubIcons.Hub);
-        yield return ("Findings to review", _dashboard.ValidationWarnings + (_components?.Findings ?? 0), "Validation and discovery", HubIcons.Rule);
+        yield return ("All integrations", _dashboard!.TotalIntegrations + (_components?.Networks ?? 0), "Authored and discovered", HubIcons.AccountTree, "/integrations");
+        yield return ("Components", _components?.Components ?? 0, "APIs, functions and systems", HubIcons.Widgets, "/components");
+        yield return ("Draft", _components?.Unlinked ?? 0, "Components awaiting a match", HubIcons.Hub, "/discovered?view=unlinked");
+        yield return ("Findings to review", _dashboard.ValidationWarnings + (_components?.Findings ?? 0), "Validation and discovery", HubIcons.Rule, "/discovered?view=findings");
     }
 }

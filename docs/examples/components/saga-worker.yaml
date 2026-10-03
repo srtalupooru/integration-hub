@@ -12,7 +12,7 @@ component:
   messages:
     - id: on-invoice-created
       action: consumes
-      contract: invoice.created
+      contract: InvoiceCreated
       version: "1.0"
       messageType: Event
       channel:
@@ -22,7 +22,7 @@ component:
       subscription: invoice-process
     - id: on-payment-confirmed
       action: consumes
-      contract: payment.confirmed
+      contract: PaymentConfirmed
       version: "1.0"
       messageType: Event
       channel:
@@ -32,7 +32,7 @@ component:
       subscription: invoice-process
     - id: request-payment
       action: sends
-      contract: payment.request
+      contract: RequestPayment
       version: "1.0"
       messageType: Command
       channel:
@@ -41,7 +41,7 @@ component:
         name: payment-commands
     - id: invoice-completed
       action: publishes
-      contract: invoice.completed
+      contract: InvoiceCompleted
       version: "1.0"
       messageType: Event
       channel:
@@ -50,7 +50,7 @@ component:
         name: invoice-events
     - id: invoice-expired
       action: publishes
-      contract: invoice.expired
+      contract: InvoiceExpired
       version: "1.0"
       messageType: Event
       channel:

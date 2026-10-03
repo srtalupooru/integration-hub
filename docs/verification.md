@@ -4,6 +4,18 @@ Verified locally on 26 September 2026 with the .NET 8 SDK.
 
 ## Automated checks
 
+The message-contract naming update on 3 October 2026 passed **340 tests**:
+Domain 15, Application 74, Infrastructure 160, and API/rendering 91, with none
+skipped. The solution run passed the first three suites; the API suite was rerun
+successfully after updating two sample-name expectations. Validation now accepts
+actual contract names such as `InvoiceCreated` and `ProcessInvoice`, preserving
+case through JSON/YAML round trips, persistence, catalogue declarations, and
+matching. Tests also cover legacy sections, dotted-name compatibility, whitespace
+rejection, and non-matching case/punctuation variants. Samples and authoring help
+now use actual-style message names. No saved definitions are automatically renamed,
+and no database migration is required.
+
+
 The component form update on 30 September 2026 passed **325 tests** with none
 skipped: the full solution run passed 323 (API/rendering 85, Application 74,
 Domain 15, Infrastructure 149), followed by two new editor-initialization rendering

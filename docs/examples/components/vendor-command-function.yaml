@@ -16,7 +16,7 @@ component:
   messages:
     - id: handle-create-vendor
       action: consumes
-      contract: vendors.create
+      contract: CreateVendor
       version: "1.0"
       messageType: Command
       contentType: application/json
@@ -26,7 +26,7 @@ component:
         name: vendor-commands
     - id: vendor-created
       action: publishes
-      contract: vendors.command-created
+      contract: VendorCreatedAfterCommand
       version: "1.0"
       messageType: Event
       contentType: application/json

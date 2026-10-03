@@ -22,10 +22,10 @@ public sealed class ComponentFormTests
         component["id"] = "invoice-worker"; component["name"] = "Invoice worker"; component["type"] = "AzureFunction";
         var messageSchema = root["$defs"]!["message"]!.AsObject();
         var input = ComponentFormSchema.Create(root, messageSchema).AsObject();
-        input["id"] = "on-created"; input["contract"] = "invoice.created";
+        input["id"] = "on-created"; input["contract"] = "InvoiceCreated";
         ComponentFormSchema.Set(input, "action", "consumes", new() { ["type"] = "string" }, true);
         input["channel"]!["namespace"] = "finance-dev"; input["channel"]!["name"] = "invoices"; input["subscription"] = "worker";
-        var output = input.DeepClone().AsObject(); output["id"] = "completed"; output["contract"] = "invoice.completed";
+        var output = input.DeepClone().AsObject(); output["id"] = "completed"; output["contract"] = "InvoiceCompleted";
         ComponentFormSchema.Set(output, "action", "publishes", new() { ["type"] = "string" }, true);
         // Existing values stay visible until explicitly removed, rather than losing route information.
         output["subscription"]!.GetValue<string>().Should().Be("worker");
@@ -111,6 +111,6 @@ public sealed class ComponentFormTests
         html.Should().Contain("field-component-name").And.Contain("field-component-id").And.Contain("Component type")
             .And.Contain("Technologies").And.Contain("&lt;script&gt;").And.NotContain("<script>").And.NotContain("field.Key");
         if (sample == "saga-worker") html.Should().Contain("InvoiceId").And.Contain("PT30M").And.Contain("payment-deadline").And.Contain("Finance.InvoiceProcess");
-        else html.Should().Contain("/vendors").And.Contain("vendors.created");
+        else html.Should().Contain("/vendors").And.Contain("VendorCreated");
     }
 }

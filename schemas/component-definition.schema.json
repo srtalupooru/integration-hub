@@ -228,7 +228,8 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 128,
-          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          "description": "Exact message contract name, for example InvoiceCreated. Matching is case-sensitive; dots are optional.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
         },
         "version": {
           "type": "string",
@@ -426,7 +427,8 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 128,
-          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          "description": "Exact message contract name, for example InvoiceCreated. Matching is case-sensitive; dots are optional.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
         },
         "version": {
           "type": "string",
@@ -521,7 +523,8 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 128,
-          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          "description": "Exact message contract name, for example InvoiceCreated. Matching is case-sensitive; dots are optional.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
         },
         "version": {
           "type": "string",

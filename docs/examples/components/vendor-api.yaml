@@ -22,7 +22,7 @@ component:
   messages:
     - id: vendor-created
       action: publishes
-      contract: vendors.created
+      contract: VendorCreated
       version: "1.0"
       messageType: Event
       contentType: application/json

@@ -14,7 +14,7 @@ component:
   messages:
     - id: invoice-created
       action: publishes
-      contract: invoice.created
+      contract: InvoiceCreated
       version: "1.0"
       messageType: Event
       channel:

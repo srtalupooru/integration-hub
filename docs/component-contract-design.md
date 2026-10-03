@@ -40,8 +40,9 @@ no fuzzy name matching, path parameter substitution, version-range inference or
 automatic cross-environment connections. In the first implementation, paths remain
 case-sensitive and trailing slashes and route parameter names must agree.
 
-Namespace and contract identifiers should be lowercase slugs with dot separators
-allowed. Paths begin with `/` and contain no query string, fragment or whitespace.
+Endpoint namespaces in this proposed design use lowercase slugs. Broker message
+contracts use the actual message name and casing, such as `InvoiceCreated`; dots
+are optional and are never inserted by the catalogue. Paths begin with `/` and contain no query string, fragment or whitespace.
 Endpoint IDs are local to their component and do not need to agree across components.
 
 An endpoint namespace identifies an exposed service boundary; it must not secretly

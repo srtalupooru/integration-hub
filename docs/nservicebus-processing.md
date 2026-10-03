@@ -5,7 +5,7 @@ A component can optionally describe the handlers and sagas running inside its lo
 For example, an Azure Function App is the component (`type: AzureFunction`), and its sagas live under `component.processing.sagas`. The same component can contain several sagas and regular handlers. Its `messages` describe the Function App's external messaging; each saga references those local message IDs. The graph node remains the Function App, with its internal processors shown in **Handlers & sagas** and connection evidence.
 
 ```text
-Invoice API → invoice.created → Invoice processing Function App
+Invoice API → InvoiceCreated → Invoice processing Function App
                                 ├─ Audit invoice handler
                                 └─ Invoice lifecycle saga
                                    ├─ consumes: on-invoice-created, on-payment-confirmed
@@ -19,9 +19,9 @@ This is design-time documentation. Importing a definition does not run NServiceB
 
 Import these three files separately through **Components → Add component**. The editor also offers matching sample buttons.
 
-1. [Invoice API](examples/components/saga-api.yaml): exposes HTTP and publishes `invoice.created` from a send-only messaging endpoint.
-2. [Invoice processing Function App](examples/components/saga-worker.yaml): hosts the saga and audit handler, and consumes that event in both an audit handler and an invoice saga. The saga may send `payment.request` and request an internal deadline.
-3. [Payment worker](examples/components/saga-payment-worker.yaml): handles the command and may publish `payment.confirmed`, which continues the invoice saga.
+1. [Invoice API](examples/components/saga-api.yaml): exposes HTTP and publishes `InvoiceCreated` from a send-only messaging endpoint.
+2. [Invoice processing Function App](examples/components/saga-worker.yaml): hosts the saga and audit handler, and consumes that event in both an audit handler and an invoice saga. The saga may send `RequestPayment` and request an internal deadline.
+3. [Payment worker](examples/components/saga-payment-worker.yaml): handles the command and may publish `PaymentConfirmed`, which continues the invoice saga.
 
 Open the component's **Handlers & sagas** tab to inspect its rules. Open the resulting network under **Integrations** to see processing evidence on its connections and its **Handlers & sagas** tab. Validation previews show the same declarations before saving. Component exports, revision history, discovery responses, and generated Markdown documentation preserve the processing details. Catalogue text search includes handler implementations, saga types, and endpoint metadata.
 
